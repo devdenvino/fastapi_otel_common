@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fastapi_otel_common"
-version = "0.0.1"
+version = "0.0.2"
 authors = [
   { name="Ramasubramanian Meenakshisundaram", email="vinothsubramanian@gmail.com" },
 ]
@@ -36,5 +36,5 @@ dependencies = [
 
 
 [project.urls]
-Homepage = "https://github.com/vinothsubramanian/fastapi_otel_common"
-Issues = "https://github.com/vinothsubramanian/fastapi_otel_common/issues"
+Homepage = "https://github.com/devdenvino/fastapi_otel_common"
+Issues = "https://github.com/devdenvino/fastapi_otel_common/issues"
