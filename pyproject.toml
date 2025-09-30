@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fastapi_otel_common"
+version = "0.0.1"
+authors = [
+  { name="Ramasubramanian Meenakshisundaram", email="vinothsubramanian@gmail.com" },
+]
+description = "This is common module for running fastapi with otel and oidc integration"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "alembic>=1.16.5",
+    "asyncpg>=0.30.0",
+    "cryptography>=45.0.6",
+    "fastapi[standard]>=0.116.1",
+    "httpx>=0.28.1",
+    "opentelemetry-api>=1.36.0",
+    "opentelemetry-exporter-jaeger>=1.21.0",
+    "opentelemetry-exporter-otlp-proto-grpc>=1.15.0",
+    "opentelemetry-instrumentation-fastapi>=0.57b0",
+    "opentelemetry-instrumentation-logging>=0.57b0",
+    "opentelemetry-sdk>=1.36.0",
+    "psycopg>=3.2.9",
+    "pyjwt>=2.10.1",
+    "python-jose>=3.5.0",
+    "sqlalchemy>=2.0.43",
+]
+
+
+[project.urls]
+Homepage = "https://github.com/vinothsubramanian/fastapi_otel_common"
+Issues = "https://github.com/vinothsubramanian/fastapi_otel_common/issues"
