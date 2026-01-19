@@ -2,8 +2,8 @@ name: Publish Python Package
 
 on:
   push:
-    branches:
-      - main
+    tags:
+      - 'v*.*.*'  # Triggers on version tags like v0.0.2, v1.0.0, etc.
   workflow_dispatch:
 
 jobs:
