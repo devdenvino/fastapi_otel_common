@@ -1,13 +1,23 @@
-import os
-import httpx
-from typing import List, Dict
+"""Configuration module for FastAPI OTEL Common.
 
+Loads configuration from environment variables with sensible defaults.
+"""
+import logging
+import os
+from typing import Any, Dict, List
+
+import httpx
+
+# Basic application configuration
 APP_TITLE = os.getenv(
-    "APP_TITLE", "Change Title using APP_TITLE environment variable")
+    "APP_TITLE", "Change Title using APP_TITLE environment variable"
+)
 APP_VERSION = os.getenv("APP_VERSION", "1.0")
+DEBUG = os.getenv("DEBUG", "False").lower() in ("true", "1", "t")
 
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
+# OIDC Configuration
 # Fetch OIDC configuration from discovery URL
 OIDC_DISCOVERY_URL = os.getenv("OIDC_DISCOVERY_URL")
 if not OIDC_DISCOVERY_URL:
@@ -16,15 +26,18 @@ if not OIDC_DISCOVERY_URL:
     ).rstrip("/")
     OIDC_DISCOVERY_URL = f"{OIDC_ISSUER_URL}/.well-known/openid-configuration"
 
+oidc_config: Dict[str, Any] = {}
 try:
-    with httpx.Client() as client:
+    with httpx.Client(timeout=10.0) as client:
         discovery_response = client.get(OIDC_DISCOVERY_URL)
-        # Raise exception for 4xx/5xx status codes
         discovery_response.raise_for_status()
         oidc_config = discovery_response.json()
 except (httpx.RequestError, httpx.HTTPStatusError) as e:
-    print(f"Error fetching OIDC discovery document: {e}")
-    # Handle error appropriately, e.g., exit or use default values
+    # Use logging instead of print for production readiness
+    logging.warning(
+        f"Failed to fetch OIDC discovery document from {OIDC_DISCOVERY_URL}: {e}. "
+        "Using default OIDC configuration."
+    )
     oidc_config = {}
 
 OIDC_ISSUER = oidc_config.get(
@@ -74,3 +87,15 @@ DB_POOL_RECYCLE = int(os.getenv("DB_POOL_RECYCLE", "3600"))  # In seconds
 DB_POOL_TIMEOUT = int(os.getenv("DB_POOL_TIMEOUT", "30"))  # In seconds
 
 ECHO_SQL = os.getenv("ECHO_SQL", "False").lower() in ("true", "1", "t")
+
+# --- Middleware Configuration ---
+# Enable/disable individual middleware components
+ENABLE_REQUEST_ID_MIDDLEWARE = os.getenv("ENABLE_REQUEST_ID_MIDDLEWARE", "True").lower() in ("true", "1", "t")
+ENABLE_SECURITY_HEADERS_MIDDLEWARE = os.getenv("ENABLE_SECURITY_HEADERS_MIDDLEWARE", "True").lower() in ("true", "1", "t")
+ENABLE_LOGGING_MIDDLEWARE = os.getenv("ENABLE_LOGGING_MIDDLEWARE", "True").lower() in ("true", "1", "t")
+ENABLE_ERROR_HANDLING_MIDDLEWARE = os.getenv("ENABLE_ERROR_HANDLING_MIDDLEWARE", "True").lower() in ("true", "1", "t")
+ENABLE_RATE_LIMIT_MIDDLEWARE = os.getenv("ENABLE_RATE_LIMIT_MIDDLEWARE", "False").lower() in ("true", "1", "t")
+
+# Rate limiting configuration (using slowapi)
+RATE_LIMIT_PER_MINUTE = int(os.getenv("RATE_LIMIT_PER_MINUTE", "60"))
+RATE_LIMIT_PER_HOUR = int(os.getenv("RATE_LIMIT_PER_HOUR", "1000"))

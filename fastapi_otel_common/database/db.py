@@ -1,18 +1,35 @@
-import sys
-import os
+"""Database configuration and session management.
 
+Provides async SQLAlchemy setup with connection pooling and Alembic integration.
+"""
+import os
+import sys
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
 from alembic import command
 from alembic.config import Config
-
 from sqlalchemy import MetaData, text
-from sqlalchemy.ext.asyncio import (AsyncAttrs, AsyncSession,
-                                    create_async_engine)
+from sqlalchemy.ext.asyncio import (
+    AsyncAttrs,
+    AsyncSession,
+    create_async_engine,
+)
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-from ..core.config import DB_HOST, DB_NAME, DB_PASS, DB_PORT, DB_POOL_RECYCLE, DB_POOL_SIZE, DB_POOL_TIMEOUT, DB_SCHEMA, DB_USER, DB_MAX_OVERFLOW, ECHO_SQL
+from ..core.config import (
+    DB_HOST,
+    DB_MAX_OVERFLOW,
+    DB_NAME,
+    DB_PASS,
+    DB_POOL_RECYCLE,
+    DB_POOL_SIZE,
+    DB_POOL_TIMEOUT,
+    DB_PORT,
+    DB_SCHEMA,
+    DB_USER,
+    ECHO_SQL,
+)
 from ..logging.logger import get_logger
 
 logger = get_logger(__name__)
@@ -40,24 +57,38 @@ AsyncSessionLocal = sessionmaker(
     engine, expire_on_commit=False, class_=AsyncSession)
 
 
-# base class for creating database models
-
-
+# Base class for creating database models
 if "alembic" not in sys.argv[0]:
-    Base = declarative_base(metadata=MetaData(
-        schema=DB_SCHEMA), cls=AsyncAttrs)
+    Base = declarative_base(metadata=MetaData(schema=DB_SCHEMA), cls=AsyncAttrs)
 else:
     Base = declarative_base(cls=AsyncAttrs)
 
 
-class BaseModel(Base):
+class BaseModel(Base):  # type: ignore
+    """Base model class for all database models.
+    
+    Provides convenient methods for JSON serialization and deserialization.
+    """
     __abstract__ = True
 
-    def to_json(self):
+    def to_json(self) -> dict:
+        """Convert model instance to JSON-serializable dictionary.
+        
+        Returns:
+            dict: Dictionary with column names as keys and values
+        """
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
     @classmethod
-    def from_json(cls, json_data):
+    def from_json(cls, json_data: dict):
+        """Create model instance from JSON dictionary.
+        
+        Args:
+            json_data: Dictionary with model field values
+            
+        Returns:
+            Instance of the model class
+        """
         return cls(**json_data)
 
 
@@ -81,28 +112,43 @@ async def init_models():
 # Dependency to get DB session
 @asynccontextmanager
 async def get_db_session_with_async_context() -> AsyncGenerator[AsyncSession, None]:
-    logger.info(f"Getting DB session...")
+    """Get database session with async context manager.
+    
+    Sets the search_path to the configured schema.
+    
+    Yields:
+        AsyncSession: Database session
+    """
+    logger.info("Getting DB session...")
     async with AsyncSessionLocal() as session:
         try:
-            await session.execute(text("SET search_path TO {};".format(DB_SCHEMA)))
+            await session.execute(text(f"SET search_path TO {DB_SCHEMA};"))
             await session.commit()
-            logger.info(
-                "Got DB session with search path {}.".format(DB_SCHEMA))
+            logger.info(f"Got DB session with search path {DB_SCHEMA}.")
             yield session
         finally:
             logger.debug("DB session closed.")
 
 
 async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
-    """FastAPI dependency to get an async database session."""
-    logger.info(f"Getting DB session...")
+    """FastAPI dependency to get an async database session.
+    
+    Sets the search_path to the configured schema.
+    Use this as a FastAPI dependency:
+        @app.get("/items")
+        async def get_items(db: AsyncSession = Depends(get_db_session)):
+            ...
+    
+    Yields:
+        AsyncSession: Database session
+    """
+    logger.info("Getting DB session...")
 
     async with AsyncSessionLocal() as session:
         try:
-            await session.execute(text("SET search_path TO {};".format(DB_SCHEMA)))
+            await session.execute(text(f"SET search_path TO {DB_SCHEMA};"))
             await session.commit()
-            logger.info(
-                "Got DB session with search path {}.".format(DB_SCHEMA))
+            logger.info(f"Got DB session with search path {DB_SCHEMA}.")
             yield session
         finally:
             logger.debug("DB session closed.")
@@ -117,13 +163,15 @@ async def close_db_connection():
 
 
 # Function to apply migrations
-def apply_migrations():
-    """Applies alembic migrations to the database."""
+def apply_migrations() -> None:
+    """Apply alembic migrations to the database.
+    
+    Raises:
+        Exception: If migrations fail to apply
+    """
     logger.info("Applying database migrations...")
     try:
         alembic_cfg = Config("alembic.ini")
-        # alembic_cfg.set_main_option(
-        #     "sqlalchemy.url", SQLALCHEMY_DATABASE_URI_SYNC)
         command.upgrade(alembic_cfg, "head")
         logger.info("Database migrations applied successfully.")
     except Exception as e:

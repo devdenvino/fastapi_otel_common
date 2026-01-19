@@ -1,21 +1,28 @@
-from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2AuthorizationCodeBearer
-from jwt import PyJWKClient, decode as jwt_decode, InvalidTokenError
+"""Authentication and authorization utilities using OIDC/OAuth2.
+
+Provides JWT token validation and user extraction from OIDC providers.
+"""
 from typing import Optional
 
+from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2AuthorizationCodeBearer
+from jwt import InvalidTokenError
+from jwt import PyJWKClient
+from jwt import decode as jwt_decode
+
+from ..core.config import (
+    OIDC_AUDIENCE,
+    OIDC_AUTH_URL,
+    OIDC_ISSUER,
+    OIDC_JWKS_URI,
+    OIDC_TOKEN_URL,
+    OIDC_USER_ID_CLAIM,
+    OIDC_USER_NAME_CLAIM,
+    SCOPES,
+    TOKEN_ALGORITHMS,
+)
 from ..core.models import UserBase
 from ..logging.logger import get_logger
-from ..core.config import (
-    OIDC_JWKS_URI,
-    TOKEN_ALGORITHMS,
-    OIDC_AUDIENCE,
-    OIDC_ISSUER,
-    OIDC_AUTH_URL,
-    OIDC_TOKEN_URL,
-    SCOPES,
-    OIDC_USER_NAME_CLAIM,
-    OIDC_USER_ID_CLAIM,
-)
 
 logger = get_logger(__name__)
 
@@ -28,7 +35,21 @@ oauth2_scheme = OAuth2AuthorizationCodeBearer(
 )
 
 
-async def validate_token_and_get_user(token: str, optional: bool = False):
+async def validate_token_and_get_user(
+    token: str, optional: bool = False
+) -> Optional[UserBase]:
+    """Validate JWT token and extract user information.
+    
+    Args:
+        token: JWT token string to validate
+        optional: If True, returns None on validation failure instead of raising exception
+        
+    Returns:
+        UserBase object with user information or None if optional=True and validation fails
+        
+    Raises:
+        HTTPException: 401 Unauthorized if token is invalid and optional=False
+    """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -65,9 +86,17 @@ async def validate_token_and_get_user(token: str, optional: bool = False):
     return None
 
 
-async def get_current_user(token: str = Depends(oauth2_scheme)):
-    """
-    Strict dependency → 401 if no valid token.
+async def get_current_user(token: str = Depends(oauth2_scheme)) -> UserBase:
+    """FastAPI dependency to get authenticated user (strict mode).
+    
+    Args:
+        token: JWT token from Authorization header
+        
+    Returns:
+        UserBase: Authenticated user information
+        
+    Raises:
+        HTTPException: 401 if token is missing or invalid
     """
     if not token:
         raise HTTPException(
@@ -78,9 +107,16 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     return await validate_token_and_get_user(token)
 
 
-async def get_current_user_optional(token: Optional[str] = Depends(oauth2_scheme)):
-    """
-    Lenient dependency → returns None if no token or invalid token.
+async def get_current_user_optional(
+    token: Optional[str] = Depends(oauth2_scheme)
+) -> Optional[UserBase]:
+    """FastAPI dependency to get user if authenticated (lenient mode).
+    
+    Args:
+        token: JWT token from Authorization header (optional)
+        
+    Returns:
+        UserBase if token is valid, None otherwise
     """
     if not token:
         return None

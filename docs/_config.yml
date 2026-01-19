@@ -1,0 +1,59 @@
+theme: just-the-docs
+
+title: FastAPI OTEL Common
+description: Production-ready FastAPI components with OpenTelemetry integration
+url: https://devdenvino.github.io/fastapi_otel_common
+
+# Color scheme
+color_scheme: dark
+
+# Search
+search_enabled: true
+search:
+  heading_level: 2
+  previews: 3
+  preview_words_before: 5
+  preview_words_after: 10
+  tokenizer_separator: /[\s/]+/
+  rel_url: true
+  button: false
+
+# Aux links
+aux_links:
+  "FastAPI OTEL Common on GitHub":
+    - "https://github.com/devdenvino/fastapi_otel_common"
+
+# Footer
+footer_content: 'Copyright &copy; 2024-2026 Ramasubramanian Meenakshisundaram. Distributed under the MIT License.'
+
+# Back to top link
+back_to_top: true
+back_to_top_text: "Back to top"
+
+# Footer last edit timestamp
+last_edit_timestamp: true
+last_edit_time_format: "%b %e %Y at %I:%M %p"
+
+# GitHub integration
+gh_edit_link: true
+gh_edit_link_text: "Edit this page on GitHub"
+gh_edit_repository: "https://github.com/devdenvino/fastapi_otel_common"
+gh_edit_branch: "main"
+gh_edit_view_mode: "tree"
+
+# Collections for navigation
+collections:
+  docs:
+    permalink: "/:path/"
+    output: true
+
+# Exclude from processing
+exclude:
+  - node_modules/
+  - vendor/
+  - .sass-cache/
+  - .jekyll-cache/
+  - gemfiles/
+  - Gemfile
+  - Gemfile.lock
+  - README.md

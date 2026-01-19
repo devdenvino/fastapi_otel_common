@@ -1,71 +1,163 @@
-# fastapi_otel_common
+# FastAPI OTEL Common
 
-## Overview
+[![PyPI version](https://badge.fury.io/py/fastapi-otel-common.svg)](https://badge.fury.io/py/fastapi-otel-common)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://devdenvino.github.io/fastapi_otel_common/)
 
-`fastapi_otel_common` is a Python library designed to provide common utilities and components for FastAPI applications. It includes features such as configuration management, database integration, logging, routing, security, and telemetry.
+Production-ready FastAPI components with OpenTelemetry integration and OIDC authentication.
 
-## Features
+## 🚀 Features
 
-- **Core Configuration**: Centralized configuration management for FastAPI applications.
-- **Database Integration**: Utilities for database connections and migrations.
-- **Logging**: Structured logging setup for better observability.
-- **Routing**: Predefined routes for health checks and other common endpoints.
-- **Security**: Authentication and authorization utilities.
-- **Telemetry**: OpenTelemetry integration for distributed tracing.
+- ✅ **Request ID Tracking** - Distributed tracing with unique request IDs
+- ✅ **Security Headers** - OWASP-compliant security headers out of the box
+- ✅ **OpenTelemetry Integration** - Full observability with distributed tracing
+- ✅ **OIDC Authentication** - Production-ready OAuth2/OIDC integration
+- ✅ **Rate Limiting** - Built-in rate limiting with slowapi
+- ✅ **Structured Logging** - JSON-structured logs with correlation IDs
+- ✅ **Database Management** - Async SQLAlchemy with connection pooling
+- ✅ **Type Safe** - Full type hints and PEP 561 compliance
 
-## Installation
-
-To install the package, use pip:
+## 📦 Installation
 
 ```bash
 pip install fastapi_otel_common
 ```
 
-## Usage
-
-### Example
-
-Here is an example of how to use `fastapi_otel_common` in your FastAPI application:
+## 🏃 Quick Start
 
 ```python
-from fastapi import FastAPI
-from fastapi_otel_common.core.config import Config
-from fastapi_otel_common.logging.logger import setup_logging
-from fastapi_otel_common.telemetry.tracing import setup_tracing
+from fastapi_otel_common import create_app, instrument_app
 
-app = FastAPI()
+# Create app with built-in middleware
+app = create_app(
+    title="My API",
+    version="1.0.0"
+)
 
-# Setup configuration
-config = Config()
+# Instrument for OpenTelemetry
+instrument_app(app)
 
-# Setup logging
-setup_logging(config)
-
-# Setup telemetry
-setup_tracing(app, config)
-
-@app.get("/health")
-def health_check():
-    return {"status": "healthy"}
+@app.get("/")
+async def root():
+    return {"message": "Hello World"}
 ```
 
-## Project Structure
+## 📚 Documentation
 
-- `core/`: Contains configuration and models.
-- `database/`: Database utilities and migration scripts.
-- `logging/`: Logging setup and utilities.
-- `routes/`: Predefined routes for the application.
-- `security/`: Authentication and authorization utilities.
-- `telemetry/`: OpenTelemetry integration for tracing.
+Full documentation is available at: **https://devdenvino.github.io/fastapi_otel_common/**
 
-## Contributing
+- [Installation Guide](https://devdenvino.github.io/fastapi_otel_common/installation.html)
+- [Configuration](https://devdenvino.github.io/fastapi_otel_common/configuration.html)
+- [Middleware](https://devdenvino.github.io/fastapi_otel_common/middleware.html)
+- [Security](https://devdenvino.github.io/fastapi_otel_common/security.html)
+- [Database](https://devdenvino.github.io/fastapi_otel_common/database.html)
+- [Examples](https://devdenvino.github.io/fastapi_otel_common/examples.html)
+- [Contributing](https://devdenvino.github.io/fastapi_otel_common/contributing.html)
 
-Contributions are welcome! Please fork the repository and submit a pull request.
+## 🔧 Configuration
 
-## License
+Configure via environment variables:
 
-This project is licensed under the MIT License. See the LICENSE file for details.
+```bash
+# Application
+APP_TITLE=My API
+APP_VERSION=1.0.0
+DEBUG=False
 
-## Contact
+# Middleware
+ENABLE_REQUEST_ID_MIDDLEWARE=True
+ENABLE_SECURITY_HEADERS_MIDDLEWARE=True
+ENABLE_LOGGING_MIDDLEWARE=True
+ENABLE_ERROR_HANDLING_MIDDLEWARE=True
+ENABLE_RATE_LIMIT_MIDDLEWARE=True
 
-For questions or support, please contact the maintainers.
+# Rate Limiting
+RATE_LIMIT_PER_MINUTE=60
+RATE_LIMIT_PER_HOUR=1000
+
+# OpenTelemetry
+SERVICE_NAME=my-api
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
+```
+
+## 🛡️ Security
+
+Includes production-ready security features:
+
+```python
+from fastapi import Depends
+from fastapi_otel_common import create_app
+from fastapi_otel_common.security import get_current_user
+from fastapi_otel_common.core.models import UserBase
+
+app = create_app()
+
+@app.get("/protected")
+async def protected_route(user: UserBase = Depends(get_current_user)):
+    return {"user_id": user.id, "email": user.email}
+```
+
+## 💾 Database
+
+Async SQLAlchemy integration:
+
+```python
+from fastapi import Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi_otel_common.database import get_db_session
+
+@app.get("/users")
+async def get_users(db: AsyncSession = Depends(get_db_session)):
+    result = await db.execute(select(User))
+    return result.scalars().all()
+```
+
+## 📊 Observability
+
+Full OpenTelemetry integration for distributed tracing:
+
+- Automatic request tracing
+- Database query tracing
+- Custom span creation
+- Context propagation
+- Jaeger/OTLP export
+
+## 🧪 Development
+
+```bash
+# Install with dev dependencies
+pip install -e ".[dev]"
+
+# Run tests
+pytest --cov=fastapi_otel_common
+
+# Format code
+black .
+
+# Lint
+ruff check .
+
+# Type check
+mypy fastapi_otel_common
+```
+
+## 🤝 Contributing
+
+Contributions are welcome! Please see our [Contributing Guide](https://devdenvino.github.io/fastapi_otel_common/contributing.html) for details.
+
+## 📝 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- FastAPI team for the amazing framework
+- OpenTelemetry community for observability tools
+- slowapi for rate limiting
+
+## 📧 Support
+
+- 📖 [Documentation](https://devdenvino.github.io/fastapi_otel_common/)
+- 🐛 [Issue Tracker](https://github.com/devdenvino/fastapi_otel_common/issues)
+- 💬 [Discussions](https://github.com/devdenvino/fastapi_otel_common/discussions)
