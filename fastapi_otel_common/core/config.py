@@ -93,9 +93,17 @@ ECHO_SQL = os.getenv("ECHO_SQL", "False").lower() in ("true", "1", "t")
 ENABLE_REQUEST_ID_MIDDLEWARE = os.getenv("ENABLE_REQUEST_ID_MIDDLEWARE", "True").lower() in ("true", "1", "t")
 ENABLE_SECURITY_HEADERS_MIDDLEWARE = os.getenv("ENABLE_SECURITY_HEADERS_MIDDLEWARE", "True").lower() in ("true", "1", "t")
 ENABLE_LOGGING_MIDDLEWARE = os.getenv("ENABLE_LOGGING_MIDDLEWARE", "True").lower() in ("true", "1", "t")
-ENABLE_ERROR_HANDLING_MIDDLEWARE = os.getenv("ENABLE_ERROR_HANDLING_MIDDLEWARE", "True").lower() in ("true", "1", "t")
 ENABLE_RATE_LIMIT_MIDDLEWARE = os.getenv("ENABLE_RATE_LIMIT_MIDDLEWARE", "False").lower() in ("true", "1", "t")
+ENABLE_OTEL_INSTRUMENTATION = os.getenv("ENABLE_OTEL_INSTRUMENTATION", "True").lower() in ("true", "1", "t")
 
 # Rate limiting configuration (using slowapi)
 RATE_LIMIT_PER_MINUTE = int(os.getenv("RATE_LIMIT_PER_MINUTE", "60"))
 RATE_LIMIT_PER_HOUR = int(os.getenv("RATE_LIMIT_PER_HOUR", "1000"))
+
+# Rate limiter backend: 'memory' or 'redis'
+RATE_LIMITER_BACKEND = os.getenv("RATE_LIMITER_BACKEND", "memory").lower()
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
+
+# --- OpenTelemetry Metrics Configuration ---
+ENABLE_OTEL_METRICS = os.getenv("ENABLE_OTEL_METRICS", "True").lower() in ("true", "1", "t")
+OTEL_METRIC_EXPORT_INTERVAL = int(os.getenv("OTEL_METRIC_EXPORT_INTERVAL", "60000"))  # In milliseconds

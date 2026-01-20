@@ -1,10 +1,11 @@
 """
-Production-ready middleware for security, logging, and rate limiting.
+Production-ready middleware for security, logging, metrics, and rate limiting.
 
 This module provides middleware components for:
 - Request ID tracking for distributed tracing
 - Security headers (OWASP best practices)
 - Request/response logging with timing
+- OpenTelemetry metrics collection
 - Global error handling
 - Rate limiting protection
 """
@@ -46,31 +47,112 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         response = await call_next(request)
         
-        # Security headers
+        # Security headers applied to all responses
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-        
-        # Content Security Policy - Allow Swagger UI resources
-        # Note: In production, consider hosting Swagger UI assets locally or removing docs entirely
-        csp_policy = (
-            "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
-            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
-            "img-src 'self' data: https://fastapi.tiangolo.com; "
-            "font-src 'self' data:; "
-            "connect-src 'self' https://cdn.jsdelivr.net"
-        )
-        response.headers["Content-Security-Policy"] = csp_policy
-        
-        # Referrer Policy
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        
-        # Permissions Policy
         response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
         
+        # Content Security Policy - Only apply to Swagger UI endpoints
+        # This allows OIDC provider connections for OAuth2 flows in documentation
+        swagger_paths = ["/docs", "/redoc", "/openapi.json"]
+        if request.url.path in swagger_paths:
+            # Import here to avoid circular dependencies
+            from ..core.config import OIDC_ISSUER
+            from urllib.parse import urlparse
+            
+            oidc_origin = ""
+            if OIDC_ISSUER:
+                parsed = urlparse(OIDC_ISSUER)
+                oidc_origin = f"{parsed.scheme}://{parsed.netloc}"
+            
+            csp_policy = (
+                "default-src 'self'; "
+                "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+                "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+                "img-src 'self' data: https://fastapi.tiangolo.com; "
+                "font-src 'self' data:; "
+                f"connect-src 'self' https://cdn.jsdelivr.net {oidc_origin}"
+            )
+            response.headers["Content-Security-Policy"] = csp_policy
+        
         return response
+
+
+class MetricsMiddleware(BaseHTTPMiddleware):
+    """Collect OpenTelemetry metrics for HTTP requests.
+    
+    Records:
+    - Request count by method, path, and status code
+    - Request duration histogram
+    - Request/response size histograms
+    - Active request counter
+    """
+    
+    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        from ..telemetry.tracing import (
+            http_request_counter,
+            http_request_duration,
+            http_request_size,
+            http_response_size,
+            http_active_requests
+        )
+        
+        start_time = time.time()
+        
+        # Get request size
+        request_size = int(request.headers.get("content-length", 0))
+        
+        # Track active requests
+        labels = {
+            "http.method": request.method,
+            "http.route": request.url.path,
+        }
+        http_active_requests.add(1, labels)
+        
+        try:
+            response = await call_next(request)
+            
+            # Calculate duration in milliseconds
+            duration_ms = (time.time() - start_time) * 1000
+            
+            # Get response size
+            response_size = int(response.headers.get("content-length", 0))
+            
+            # Complete labels with status
+            metric_labels = {
+                "http.method": request.method,
+                "http.route": request.url.path,
+                "http.status_code": str(response.status_code),
+            }
+            
+            # Record metrics
+            http_request_counter.add(1, metric_labels)
+            http_request_duration.record(duration_ms, metric_labels)
+            
+            if request_size > 0:
+                http_request_size.record(request_size, metric_labels)
+            
+            if response_size > 0:
+                http_response_size.record(response_size, metric_labels)
+            
+            return response
+        except Exception as exc:
+            # Record error metrics
+            error_labels = {
+                "http.method": request.method,
+                "http.route": request.url.path,
+                "http.status_code": "500",
+            }
+            http_request_counter.add(1, error_labels)
+            duration_ms = (time.time() - start_time) * 1000
+            http_request_duration.record(duration_ms, error_labels)
+            raise
+        finally:
+            # Decrement active requests
+            http_active_requests.add(-1, labels)
 
 
 class LoggingMiddleware(BaseHTTPMiddleware):

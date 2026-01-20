@@ -10,9 +10,8 @@ This package provides:
 - Global error handling
 - Rate limiting protection (powered by slowapi)
 """
-from .app import create_app, instrument_app
+from .app import create_app
 from .core.middleware import (
-    ErrorHandlingMiddleware,
     LoggingMiddleware,
     RateLimitMiddleware,
     RequestIDMiddleware,
@@ -23,8 +22,6 @@ __version__ = "0.0.2"
 
 __all__ = [
     "create_app",
-    "instrument_app",
-    "ErrorHandlingMiddleware",
     "LoggingMiddleware",
     "RateLimitMiddleware",
     "RequestIDMiddleware",

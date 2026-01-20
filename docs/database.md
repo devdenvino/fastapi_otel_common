@@ -326,12 +326,11 @@ from sqlalchemy import Column, Integer, String, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel as PydanticBase
 
-from fastapi_otel_common import create_app, instrument_app
+from fastapi_otel_common import create_app
 from fastapi_otel_common.database import BaseModel, get_db_session
 
-# Create app
+# Create app with automatic OpenTelemetry instrumentation
 app = create_app(title="User API", version="1.0.0")
-instrument_app(app)
 
 # Database model
 class User(BaseModel):
@@ -410,5 +409,5 @@ GRANT ALL ON SCHEMA myschema TO myuser;
 
 ## Next Steps
 
-- [Examples](examples.md) - See complete examples
-- [API Reference](api.md) - Full API documentation
+- [Examples](examples) - See complete examples
+- [API Reference](api) - Full API documentation

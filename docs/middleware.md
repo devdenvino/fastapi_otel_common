@@ -286,10 +286,10 @@ async def expensive_endpoint():
 
 ```python
 from fastapi import FastAPI
-from fastapi_otel_common import create_app, instrument_app
+from fastapi_otel_common import create_app
 from fastapi_otel_common.core import RateLimitMiddleware
 
-# Create app with all standard middleware
+# Create app with all standard middleware and automatic OpenTelemetry instrumentation
 app = create_app(
     title="My API",
     version="1.0.0"
@@ -301,9 +301,6 @@ app = create_app(
 #     requests_per_minute=100,
 #     requests_per_hour=5000
 # )
-
-# Instrument for OpenTelemetry
-instrument_app(app)
 
 # Add your routes
 @app.get("/")

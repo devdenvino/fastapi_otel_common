@@ -88,6 +88,6 @@ CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
 
 ## Next Steps
 
-- [Configuration Guide](configuration.md) - Configure your application
-- [Quick Start](index.md#quick-start) - Build your first app
-- [Examples](examples.md) - See working examples
+- [Configuration Guide](configuration) - Configure your application
+- [Quick Start](index#quick-start) - Build your first app
+- [Examples](examples) - See working examples

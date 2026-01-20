@@ -5,42 +5,62 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://devdenvino.github.io/fastapi_otel_common/)
 
-Production-ready FastAPI components with OpenTelemetry integration and OIDC authentication.
+Production-ready FastAPI components with OpenTelemetry integration, OIDC authentication, and enterprise features.
 
 ## 🚀 Features
 
-- ✅ **Request ID Tracking** - Distributed tracing with unique request IDs
-- ✅ **Security Headers** - OWASP-compliant security headers out of the box
-- ✅ **OpenTelemetry Integration** - Full observability with distributed tracing
-- ✅ **OIDC Authentication** - Production-ready OAuth2/OIDC integration
-- ✅ **Rate Limiting** - Built-in rate limiting with slowapi
+### Observability
+- ✅ **OpenTelemetry Tracing** - Full distributed tracing with OTLP export
+- ✅ **OpenTelemetry Metrics** - HTTP request metrics (count, duration, size)
 - ✅ **Structured Logging** - JSON-structured logs with correlation IDs
+- ✅ **Request ID Tracking** - Distributed tracing with unique request IDs
+
+### Security & Authentication
+- ✅ **OIDC Authentication** - Production-ready OAuth2/OIDC integration
+- ✅ **Security Headers** - OWASP-compliant security headers out of the box
+- ✅ **Rate Limiting** - Memory or Redis-backed rate limiting
+
+### Reliability
+- ✅ **Health Checks** - Kubernetes-compatible liveness/readiness/startup probes
+- ✅ **Lifecycle Management** - Proper startup/shutdown with resource cleanup
 - ✅ **Database Management** - Async SQLAlchemy with connection pooling
+
+### Developer Experience
 - ✅ **Type Safe** - Full type hints and PEP 561 compliance
+- ✅ **Environment-Driven Config** - Zero-config with sensible defaults
+- ✅ **One-Line Setup** - Get started with a single function call
 
 ## 📦 Installation
 
 ```bash
+# Basic installation
 pip install fastapi_otel_common
+
+# With Redis support for distributed rate limiting
+pip install fastapi_otel_common[redis]
 ```
 
 ## 🏃 Quick Start
 
 ```python
-from fastapi_otel_common import create_app, instrument_app
+from fastapi_otel_common import create_app
 
-# Create app with built-in middleware
+# Create app with built-in middleware and OpenTelemetry instrumentation
 app = create_app(
     title="My API",
     version="1.0.0"
 )
 
-# Instrument for OpenTelemetry
-instrument_app(app)
-
 @app.get("/")
 async def root():
     return {"message": "Hello World"}
+
+# That's it! Your app now has:
+# ✅ OpenTelemetry tracing and metrics
+# ✅ Security headers
+# ✅ Health check endpoints (/healthz, /readyz, /livez)
+# ✅ Request logging
+# ✅ Structured error handling
 ```
 
 ## 📚 Documentation
@@ -50,6 +70,9 @@ Full documentation is available at: **https://devdenvino.github.io/fastapi_otel_
 - [Installation Guide](https://devdenvino.github.io/fastapi_otel_common/installation.html)
 - [Configuration](https://devdenvino.github.io/fastapi_otel_common/configuration.html)
 - [Middleware](https://devdenvino.github.io/fastapi_otel_common/middleware.html)
+- [OpenTelemetry Metrics](docs/metrics.md)
+- [Health Checks](docs/health-checks.md)
+- [Rate Limiting](docs/rate-limiting.md)
 - [Security](https://devdenvino.github.io/fastapi_otel_common/security.html)
 - [Database](https://devdenvino.github.io/fastapi_otel_common/database.html)
 - [Examples](https://devdenvino.github.io/fastapi_otel_common/examples.html)
@@ -69,17 +92,54 @@ DEBUG=False
 ENABLE_REQUEST_ID_MIDDLEWARE=True
 ENABLE_SECURITY_HEADERS_MIDDLEWARE=True
 ENABLE_LOGGING_MIDDLEWARE=True
-ENABLE_ERROR_HANDLING_MIDDLEWARE=True
-ENABLE_RATE_LIMIT_MIDDLEWARE=True
+ENABLE_RATE_LIMIT_MIDDLEWARE=False
 
 # Rate Limiting
 RATE_LIMIT_PER_MINUTE=60
 RATE_LIMIT_PER_HOUR=1000
+RATE_LIMITER_BACKEND=memory  # or 'redis' for distributed
+REDIS_URL=redis://localhost:6379
 
 # OpenTelemetry
 SERVICE_NAME=my-api
+SERVICE_VERSION=1.0.0
 OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
+ENABLE_OTEL_INSTRUMENTATION=True
+ENABLE_OTEL_METRICS=True
+OTEL_METRIC_EXPORT_INTERVAL=60000  # Export interval in milliseconds
+OTEL_METRIC_EXPORT_TIMEOUT=5000    # Export timeout in milliseconds (prevents shutdown hangs)
 ```
+
+## 🏥 Health Checks
+
+Kubernetes-compatible health probes are automatically included:
+
+```python
+# GET /healthz  - Liveness probe
+# GET /livez    - Liveness probe (alias)
+# GET /readyz   - Readiness probe (checks DB and OIDC)
+# GET /startupz - Startup probe
+```
+
+Example Kubernetes configuration:
+
+```yaml
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: 8000
+  initialDelaySeconds: 30
+  periodSeconds: 10
+
+readinessProbe:
+  httpGet:
+    path: /readyz
+    port: 8000
+  initialDelaySeconds: 10
+  periodSeconds: 5
+```
+
+See [Health Checks Documentation](docs/health-checks.md) for details.
 
 ## 🛡️ Security
 
@@ -115,13 +175,28 @@ async def get_users(db: AsyncSession = Depends(get_db_session)):
 
 ## 📊 Observability
 
-Full OpenTelemetry integration for distributed tracing:
+Full OpenTelemetry integration for distributed tracing and metrics:
 
+### Tracing
 - Automatic request tracing
 - Database query tracing
 - Custom span creation
 - Context propagation
-- Jaeger/OTLP export
+- OTLP/Jaeger export
+
+### Metrics
+Automatically collected HTTP metrics:
+- **Request count** by method, path, and status code
+- **Request duration** histogram in milliseconds
+- **Request/response sizes** histograms
+- **Active requests** counter
+
+```python
+# Metrics are automatically exported to your OTLP collector
+# View in Grafana, Prometheus, or any OpenTelemetry-compatible backend
+```
+
+See [Metrics Documentation](docs/metrics.md) for visualization and querying.
 
 ## 🧪 Development
 

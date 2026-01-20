@@ -141,6 +141,15 @@ INIT_DB=false  # Set to 'true' to drop and recreate tables (DANGEROUS!)
 
 ## OpenTelemetry Configuration
 
+### Enable/Disable Instrumentation
+
+```bash
+# Enable/disable OpenTelemetry instrumentation (enabled by default)
+ENABLE_OTEL_INSTRUMENTATION=True
+```
+
+When `ENABLE_OTEL_INSTRUMENTATION=True`, the FastAPI application created by `create_app()` is automatically instrumented with OpenTelemetry for distributed tracing.
+
 ### Service Identity
 
 ```bash
@@ -206,6 +215,7 @@ RATE_LIMIT_PER_MINUTE=100
 RATE_LIMIT_PER_HOUR=5000
 
 # OpenTelemetry Configuration
+ENABLE_OTEL_INSTRUMENTATION=True
 SERVICE_NAME=my-production-api
 SERVICE_VERSION=1.0.0
 OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
@@ -257,6 +267,6 @@ app = create_app()
 
 ## Next Steps
 
-- [Middleware Documentation](middleware.md) - Configure middleware
-- [Security Guide](security.md) - Set up authentication
-- [Database Guide](database.md) - Configure database
+- [Middleware Documentation](middleware) - Configure middleware
+- [Security Guide](security) - Set up authentication
+- [Database Guide](database) - Configure database

@@ -4,11 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fastapi_otel_common"
-version = "0.0.2"
+version = "0.1.0"
 authors = [
   { name="Ramasubramanian Meenakshisundaram", email="vinothsubramanian@gmail.com" },
 ]
-description = "Production-ready FastAPI components with OpenTelemetry and OIDC integration"
+description = "Production-ready FastAPI components with OpenTelemetry, metrics, health checks, and OIDC integration"
 readme = "README.md"
 requires-python = ">=3.12"
 license = {text = "MIT"}
@@ -45,6 +45,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+redis = [
+    "redis>=5.0.0",
+]
 dev = [
     "pytest>=8.0.0",
     "pytest-asyncio>=0.23.0",

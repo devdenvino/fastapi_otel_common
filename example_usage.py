@@ -9,11 +9,11 @@ from fastapi import FastAPI
 from fastapi_otel_common import (
     RateLimitMiddleware,
     create_app,
-    instrument_app,
 )
 
 # Option 1: Use create_app with built-in middleware (RECOMMENDED)
 # All middleware is configured via environment variables
+# OpenTelemetry instrumentation is automatic when enabled via ENABLE_OTEL_INSTRUMENTATION=True
 # See env.example for available configuration options
 app = create_app(
     title="My API",
@@ -29,9 +29,6 @@ app = create_app(
 #     requests_per_hour=5000,
 #     cleanup_interval=300
 # )
-
-# Instrument the app for OpenTelemetry
-instrument_app(app)
 
 
 # Option 2: Manual setup with individual middleware (for advanced use cases)

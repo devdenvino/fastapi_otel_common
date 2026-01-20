@@ -18,17 +18,14 @@ nav_order: 7
 ## Basic FastAPI Application
 
 ```python
-from fastapi_otel_common import create_app, instrument_app
+from fastapi_otel_common import create_app
 
-# Create app with all middleware enabled
+# Create app with all middleware enabled and automatic OpenTelemetry instrumentation
 app = create_app(
     title="My API",
     version="1.0.0",
     description="Production-ready API with OpenTelemetry"
 )
-
-# Instrument for OpenTelemetry
-instrument_app(app)
 
 @app.get("/")
 async def root():
@@ -43,12 +40,11 @@ async def health():
 
 ```python
 from fastapi import Depends, HTTPException
-from fastapi_otel_common import create_app, instrument_app
+from fastapi_otel_common import create_app
 from fastapi_otel_common.security import get_current_user, get_current_user_optional
 from fastapi_otel_common.core.models import UserBase
 
 app = create_app(title="Secure API", version="1.0.0")
-instrument_app(app)
 
 @app.get("/public")
 async def public_endpoint():
@@ -83,7 +79,7 @@ from sqlalchemy import Column, Integer, String, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
 
-from fastapi_otel_common import create_app, instrument_app
+from fastapi_otel_common import create_app
 from fastapi_otel_common.database import BaseModel as DBBase, get_db_session
 from fastapi_otel_common.security import get_current_user
 from fastapi_otel_common.core.models import UserBase
@@ -113,7 +109,6 @@ class ItemResponse(BaseModel):
 
 # Create app
 app = create_app(title="Items API", version="1.0.0")
-instrument_app(app)
 
 # Routes
 @app.post("/items", response_model=ItemResponse)
@@ -181,13 +176,12 @@ async def delete_item(
 
 ```python
 from fastapi import Request
-from fastapi_otel_common import create_app, instrument_app
+from fastapi_otel_common import create_app
 
 app = create_app(
     title="Rate Limited API",
     version="1.0.0"
 )
-instrument_app(app)
 
 # Access the limiter from app state
 limiter = app.state.limiter
@@ -220,7 +214,6 @@ from fastapi_otel_common import (
     RateLimitMiddleware,
     RequestIDMiddleware,
     SecurityHeadersMiddleware,
-    instrument_app
 )
 
 app = FastAPI(title="Custom Middleware", version="1.0.0")
@@ -236,8 +229,9 @@ app.add_middleware(
 )
 app.add_middleware(RequestIDMiddleware)
 
-# Instrument for OpenTelemetry
-instrument_app(app)
+# Note: OpenTelemetry instrumentation must be added manually when not using create_app()
+# from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+# FastAPIInstrumentor.instrument_app(app)
 
 @app.get("/")
 async def root():
@@ -361,7 +355,7 @@ OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
 
 ## Next Steps
 
-- [Configuration Guide](configuration.md) - Detailed configuration
-- [Security Guide](security.md) - Authentication setup
-- [Database Guide](database.md) - Database integration
-- [Middleware Guide](middleware.md) - Middleware details
+- [Configuration Guide](configuration) - Detailed configuration
+- [Security Guide](security) - Authentication setup
+- [Database Guide](database) - Database integration
+- [Middleware Guide](middleware) - Middleware details

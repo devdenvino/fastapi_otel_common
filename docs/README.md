@@ -8,6 +8,9 @@ This directory contains the documentation for fastapi_otel_common, built with [J
 - `installation.md` - Installation guide
 - `configuration.md` - Configuration reference
 - `middleware.md` - Middleware documentation
+- `metrics.md` - OpenTelemetry Metrics guide
+- `health-checks.md` - Health check endpoints
+- `rate-limiting.md` - Rate limiting configuration
 - `security.md` - Security and authentication
 - `database.md` - Database integration
 - `examples.md` - Working examples
@@ -86,10 +89,16 @@ app = create_app()
 
 ### Links
 
-Use relative links for internal pages:
+Use relative links for internal pages without the .md extension:
 
 ```markdown
-[Configuration Guide](configuration.md)
+[Configuration Guide](configuration)
+```
+
+For anchor links:
+
+```markdown
+[Quick Start](index#quick-start)
 ```
 
 ## 🎨 Theme Customization

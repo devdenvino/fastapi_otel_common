@@ -208,18 +208,15 @@ async def expensive_endpoint(request: Request):
 
 ```python
 from fastapi import Depends, FastAPI
-from fastapi_otel_common import create_app, instrument_app
+from fastapi_otel_common import create_app
 from fastapi_otel_common.security import get_current_user
 from fastapi_otel_common.core.models import UserBase
 
-# Create app with security enabled
+# Create app with security and automatic OpenTelemetry instrumentation
 app = create_app(
     title="Secure API",
     version="1.0.0"
 )
-
-# Instrument for OpenTelemetry
-instrument_app(app)
 
 @app.get("/")
 async def root():
@@ -257,6 +254,6 @@ async def admin_only(user: UserBase = Depends(get_current_user)):
 
 ## Next Steps
 
-- [Database Guide](database.md) - Set up database integration
-- [Examples](examples.md) - See complete examples
-- [API Reference](api.md) - Full API documentation
+- [Database Guide](database) - Set up database integration
+- [Examples](examples) - See complete examples
+- [API Reference](api) - Full API documentation

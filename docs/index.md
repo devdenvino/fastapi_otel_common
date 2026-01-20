@@ -40,16 +40,13 @@ pip install fastapi_otel_common
 ### Basic Usage
 
 ```python
-from fastapi_otel_common import create_app, instrument_app
+from fastapi_otel_common import create_app
 
-# Create app with built-in middleware
+# Create app with built-in middleware and automatic OpenTelemetry instrumentation
 app = create_app(
     title="My API",
     version="1.0.0"
 )
-
-# Instrument for OpenTelemetry
-instrument_app(app)
 
 @app.get("/")
 async def root():
@@ -81,16 +78,17 @@ RATE_LIMIT_PER_HOUR=1000
 SERVICE_NAME=my-api
 SERVICE_VERSION=1.0.0
 OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
+ENABLE_OTEL_INSTRUMENTATION=True
 ```
 
 ## What's Next?
 
-- [Installation Guide](installation.md) - Detailed installation instructions
-- [Configuration](configuration.md) - Complete configuration reference
-- [Middleware](middleware.md) - Middleware documentation
-- [Security](security.md) - Authentication and authorization
-- [Database](database.md) - Database integration guide
-- [Examples](examples.md) - Full working examples
+- [Installation Guide](installation) - Detailed installation instructions
+- [Configuration](configuration) - Complete configuration reference
+- [Middleware](middleware) - Middleware documentation
+- [Security](security) - Authentication and authorization
+- [Database](database) - Database integration guide
+- [Examples](examples) - Full working examples
 
 ## Requirements
 
