@@ -1,3 +1,4 @@
+import os
 from contextlib import asynccontextmanager
 from typing import Any, AsyncIterator, Optional
 
@@ -89,20 +90,32 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         # Shutdown
         logger.info("Application shutdown initiated")
         
+        # Suppress OTLP exporter errors during shutdown to avoid confusing error messages
+        import logging
+        otlp_logger = logging.getLogger("opentelemetry.exporter.otlp.proto.grpc.exporter")
+        otlp_logger.setLevel(logging.CRITICAL)
+        
         # Cleanup Redis connection
         if _redis_rate_limiter:
             await _redis_rate_limiter.disconnect()
             logger.info("Redis rate limiter disconnected")
         
-        # Shutdown OpenTelemetry metrics
+        # Shutdown OpenTelemetry metrics with timeout
         if ENABLE_OTEL_METRICS:
             from .telemetry.tracing import shutdown_metrics
-            shutdown_metrics()
+            shutdown_timeout = int(os.getenv("OTEL_SHUTDOWN_TIMEOUT", "3000"))
+            shutdown_metrics(timeout_millis=shutdown_timeout)
         
-        # Shutdown OpenTelemetry tracer
+        # Shutdown OpenTelemetry tracer with timeout
         if ENABLE_OTEL_INSTRUMENTATION:
             from .telemetry.tracing import shutdown_tracer
-            shutdown_tracer()
+            shutdown_timeout = int(os.getenv("OTEL_SHUTDOWN_TIMEOUT", "3000"))
+            shutdown_tracer(timeout_millis=shutdown_timeout)
+        
+        # Brief sleep to allow background exporter threads to finish
+        import asyncio
+        import time
+        time.sleep(0.2)
         
         logger.info("Application shutdown completed")
 

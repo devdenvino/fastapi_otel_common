@@ -73,12 +73,20 @@ SCOPES: Dict[str, str] = {
 OIDC_USER_NAME_CLAIM = os.getenv("OIDC_USER_NAME_CLAIM", "preferred_username")
 OIDC_USER_ID_CLAIM = os.getenv("OIDC_USER_ID_CLAIM", "company")
 
+# Database configuration
+# DB_TYPE can be 'postgresql' or 'sqlite' (default: postgresql)
+DB_TYPE = os.getenv("DB_TYPE", "sqlite").lower()
+
 DB_USER = os.getenv("DB_USER", "postgres")
 DB_PASS = os.getenv("DB_PASS", "postgres")
 DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_PORT = os.getenv("DB_PORT", "5432")
 DB_NAME = os.getenv("DB_NAME", "public")
 DB_SCHEMA = os.getenv("DB_SCHEMA", "public")
+
+# SQLite configuration (used when DB_TYPE=sqlite)
+# Default: ./data/app.db (relative to project root)
+SQLITE_DB_PATH = os.getenv("SQLITE_DB_PATH", "./data/app.db")
 
 # --- Connection Pool Settings ---
 DB_POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "5"))

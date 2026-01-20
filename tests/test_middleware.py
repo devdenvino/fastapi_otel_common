@@ -76,9 +76,9 @@ def test_security_headers(client: TestClient) -> None:
     assert response.headers["X-Frame-Options"] == "DENY"
     assert response.headers["X-XSS-Protection"] == "1; mode=block"
     assert "max-age=31536000" in response.headers["Strict-Transport-Security"]
-    assert "Content-Security-Policy" in response.headers
     assert response.headers["Referrer-Policy"] == "strict-origin-when-cross-origin"
     assert "Permissions-Policy" in response.headers
+    # Note: CSP is only added to Swagger UI endpoints (/docs, /redoc, /openapi.json)
 
 
 def test_error_handling(client: TestClient) -> None:

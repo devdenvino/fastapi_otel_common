@@ -106,10 +106,11 @@ class MetricsMiddleware(BaseHTTPMiddleware):
         request_size = int(request.headers.get("content-length", 0))
         
         # Track active requests
-        labels = {
-            "http.method": request.method,
-            "http.route": request.url.path,
-        }
+        # Convert to tuple of tuples for OpenTelemetry compatibility
+        labels = (
+            ("http.method", request.method),
+            ("http.route", request.url.path),
+        )
         http_active_requests.add(1, labels)
         
         try:
@@ -122,11 +123,12 @@ class MetricsMiddleware(BaseHTTPMiddleware):
             response_size = int(response.headers.get("content-length", 0))
             
             # Complete labels with status
-            metric_labels = {
-                "http.method": request.method,
-                "http.route": request.url.path,
-                "http.status_code": str(response.status_code),
-            }
+            # Convert to tuple of tuples for OpenTelemetry compatibility
+            metric_labels = (
+                ("http.method", request.method),
+                ("http.route", request.url.path),
+                ("http.status_code", str(response.status_code)),
+            )
             
             # Record metrics
             http_request_counter.add(1, metric_labels)
@@ -141,11 +143,12 @@ class MetricsMiddleware(BaseHTTPMiddleware):
             return response
         except Exception as exc:
             # Record error metrics
-            error_labels = {
-                "http.method": request.method,
-                "http.route": request.url.path,
-                "http.status_code": "500",
-            }
+            # Convert to tuple of tuples for OpenTelemetry compatibility
+            error_labels = (
+                ("http.method", request.method),
+                ("http.route", request.url.path),
+                ("http.status_code", "500"),
+            )
             http_request_counter.add(1, error_labels)
             duration_ms = (time.time() - start_time) * 1000
             http_request_duration.record(duration_ms, error_labels)
@@ -194,15 +197,25 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             
         except Exception as e:
             duration = time.time() - start_time
+            # Get traceback information
+            import sys
+            import traceback as tb
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            tb_lines = tb.format_tb(exc_traceback)
+            last_frame = tb.extract_tb(exc_traceback)[-1] if exc_traceback else None
+            
             logger.error(
-                f"Request failed: {str(e)}",
+                f"Request failed: {str(e)} (at {last_frame.filename}:{last_frame.lineno} in {last_frame.name})" if last_frame else f"Request failed: {str(e)}",
                 extra={
                     "method": request.method,
                     "path": request.url.path,
                     "duration_ms": round(duration * 1000, 2),
                     "request_id": getattr(request.state, "request_id", None),
-                    "error": str(e)
-                }
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                    "traceback": "".join(tb_lines)
+                },
+                exc_info=True
             )
             raise
 
@@ -214,12 +227,20 @@ class ErrorHandlingMiddleware(BaseHTTPMiddleware):
         try:
             return await call_next(request)
         except Exception as e:
+            # Get traceback information
+            import sys
+            import traceback as tb
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            last_frame = tb.extract_tb(exc_traceback)[-1] if exc_traceback else None
+            
             logger.exception(
-                f"Unhandled exception: {str(e)}",
+                f"Unhandled exception: {str(e)} (at {last_frame.filename}:{last_frame.lineno} in {last_frame.name})" if last_frame else f"Unhandled exception: {str(e)}",
                 extra={
                     "path": request.url.path,
                     "method": request.method,
-                    "request_id": getattr(request.state, "request_id", None)
+                    "request_id": getattr(request.state, "request_id", None),
+                    "error_type": type(e).__name__,
+                    "error_location": f"{last_frame.filename}:{last_frame.lineno}" if last_frame else "unknown"
                 }
             )
             

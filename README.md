@@ -17,6 +17,7 @@ Production-ready FastAPI components with OpenTelemetry integration, OIDC authent
 
 ### Security & Authentication
 - ✅ **OIDC Authentication** - Production-ready OAuth2/OIDC integration
+- ✅ **Role-Based Access Control (RBAC)** - Client-specific role checking
 - ✅ **Security Headers** - OWASP-compliant security headers out of the box
 - ✅ **Rate Limiting** - Memory or Redis-backed rate limiting
 
@@ -73,6 +74,7 @@ Full documentation is available at: **https://devdenvino.github.io/fastapi_otel_
 - [OpenTelemetry Metrics](docs/metrics.md)
 - [Health Checks](docs/health-checks.md)
 - [Rate Limiting](docs/rate-limiting.md)
+- [Role-Based Access Control](docs/role-based-access-control.md)
 - [Security](https://devdenvino.github.io/fastapi_otel_common/security.html)
 - [Database](https://devdenvino.github.io/fastapi_otel_common/database.html)
 - [Examples](https://devdenvino.github.io/fastapi_otel_common/examples.html)
@@ -145,6 +147,8 @@ See [Health Checks Documentation](docs/health-checks.md) for details.
 
 Includes production-ready security features:
 
+### Basic Authentication
+
 ```python
 from fastapi import Depends
 from fastapi_otel_common import create_app
@@ -158,9 +162,55 @@ async def protected_route(user: UserBase = Depends(get_current_user)):
     return {"user_id": user.id, "email": user.email}
 ```
 
+### Role-Based Access Control (RBAC)
+
+Protect endpoints with client-specific role requirements:
+
+```python
+from fastapi_otel_common.security import RequireRoles
+
+# Require admin or manager role for my-client-id
+@app.get("/admin/dashboard")
+async def admin_dashboard(
+    user: UserBase = Depends(RequireRoles("my-client-id", ["admin", "manager"]))
+):
+    return {"message": f"Welcome {user.given_name}", "roles": user.roles}
+
+# Use as dependency without accessing user
+@app.delete(
+    "/admin/system",
+    dependencies=[Depends(RequireRoles("my-client-id", ["super-admin"]))]
+)
+async def dangerous_operation():
+    return {"message": "Operation completed"}
+```
+
+See [Role-Based Access Control Documentation](docs/role-based-access-control.md) for details.
+
 ## 💾 Database
 
-Async SQLAlchemy integration:
+Async SQLAlchemy with **multi-database support** via adapter pattern:
+
+### Quick Start with SQLite (Development)
+
+```bash
+# No PostgreSQL needed! Just set DB_TYPE
+DB_TYPE=sqlite
+SQLITE_DB_PATH=./data/app.db
+```
+
+### Production with PostgreSQL
+
+```bash
+DB_TYPE=postgresql
+DB_USER=postgres
+DB_PASS=postgres
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=mydb
+```
+
+### Using in FastAPI
 
 ```python
 from fastapi import Depends

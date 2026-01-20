@@ -43,6 +43,8 @@ def run_migrations_offline(target_metadata: MetaData) -> None:
     )
 
     with context.begin_transaction():
+        # Only create schemas for databases that support them (PostgreSQL)
+        # Note: In offline mode, we assume PostgreSQL if schema is specified
         if target_metadata.schema:
             print(f"Creating schema {target_metadata.schema} if not exists")
             context.execute(f"CREATE SCHEMA IF NOT EXISTS {target_metadata.schema};")
@@ -71,16 +73,18 @@ def run_migrations_online(target_metadata: MetaData) -> None:
     )
 
     with connectable.connect() as connection:
-        # set search path on the connection, which ensures that
-        # PostgreSQL will emit all CREATE / ALTER / DROP statements
-        # in terms of this schema by default
-        connection.execute(text('set search_path to "%s"' % current_tenant))
-        # in SQLAlchemy v2+ the search path change needs to be committed
-        connection.commit()
+        # Only set search_path for PostgreSQL (SQLite doesn't support schemas)
+        if connection.dialect.name == 'postgresql' and current_tenant:
+            # set search path on the connection, which ensures that
+            # PostgreSQL will emit all CREATE / ALTER / DROP statements
+            # in terms of this schema by default
+            connection.execute(text('set search_path to "%s"' % current_tenant))
+            # in SQLAlchemy v2+ the search path change needs to be committed
+            connection.commit()
 
-        # make use of non-supported SQLAlchemy attribute to ensure
-        # the dialect reflects tables in terms of the current tenant name
-        connection.dialect.default_schema_name = current_tenant
+            # make use of non-supported SQLAlchemy attribute to ensure
+            # the dialect reflects tables in terms of the current tenant name
+            connection.dialect.default_schema_name = current_tenant
 
         context.configure(
             connection=connection,
@@ -89,7 +93,8 @@ def run_migrations_online(target_metadata: MetaData) -> None:
         )
 
         with context.begin_transaction():
-            if target_metadata.schema:
+            # Only create schemas for databases that support them (PostgreSQL)
+            if target_metadata.schema and connection.dialect.name == 'postgresql':
                 print(f"Creating schema {target_metadata.schema} if not exists")
                 context.execute(
                     f"CREATE SCHEMA IF NOT EXISTS {target_metadata.schema};"

@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Multi-database support**: Added adapter pattern for scalable database support
+  - SQLite support for development (zero configuration, no PostgreSQL needed)
+  - MySQL/MariaDB support out of the box
+  - Easy to add custom database types (Oracle, MSSQL, etc.)
+  - `DatabaseAdapter` abstract base class for creating new adapters
+  - `DatabaseAdapterFactory` for registering and creating adapters
+  - New configuration: `DB_TYPE` (postgresql/sqlite/mysql)
+  - New configuration: `SQLITE_DB_PATH` for SQLite database location
+  - Included adapters: `PostgreSQLAdapter`, `SQLiteAdapter`, `MySQLAdapter`
+  - Example for adding custom databases ([examples/example_custom_database.py](examples/example_custom_database.py))
+
+### Changed
+- **Database architecture**: Refactored database module to use adapter pattern instead of conditional logic
+  - Cleaner code following SOLID principles (Open/Closed, Single Responsibility)
+  - Database-specific logic is now isolated in adapter classes
+  - Easier to maintain and extend with new database types
+  - Zero performance impact (adapter created once at startup)
+- **Dependencies**: Added `aiosqlite>=0.20.0` for SQLite async support
+- **Optional dependencies**: Added `mysql` extra for MySQL support (`pip install fastapi_otel_common[mysql]`)
+
+### Documentation
+- Added [MULTI_DATABASE_ARCHITECTURE.md](docs/MULTI_DATABASE_ARCHITECTURE.md) explaining the adapter pattern
+- Added [QUICKSTART_SQLITE.md](docs/QUICKSTART_SQLITE.md) for quick development setup
+- Updated [database.md](docs/database.md) with multi-database configuration and examples
+- Updated README.md with SQLite quick start example
+
 ### Fixed
 - **Shutdown hang**: Fixed application hanging on shutdown when metrics export fails
   - Added proper OpenTelemetry provider shutdown in lifespan handler

@@ -27,6 +27,7 @@ logger = get_logger(__name__)
 
 # Global tracer provider reference for proper shutdown
 _tracer_provider = None
+_is_shutting_down = False
 
 
 def setup_tracer() -> None:
@@ -35,7 +36,10 @@ def setup_tracer() -> None:
     Reads configuration from environment variables:
     - SERVICE_NAME: Name of the service (default: 'changeme')
     - SERVICE_VERSION: Version of the service (default: 'changeme')
-    - OTEL_EXPORTER_OTLP_ENDPOINT: OTLP endpoint (default: 'http://localhost:4317')
+    - OTEL_EXPORTER_OTLP_ENDPOINT: OTLP endpoint (only used if OTEL_EXPORTER_OTLP_TRACES_ENDPOINT is not set)
+    - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: OTLP traces endpoint (if not set, OTLP export is disabled)
+    - OTEL_BSP_EXPORT_TIMEOUT: Export timeout in milliseconds (default: 5000)
+    - OTEL_BSP_SCHEDULE_DELAY: Delay between exports in milliseconds (default: 5000)
     """
     global _tracer_provider
     
@@ -46,26 +50,73 @@ def setup_tracer() -> None:
     )
 
     _tracer_provider = TracerProvider(resource=resource)
-    otlp_endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317")
-    processor = BatchSpanProcessor(OTLPSpanExporter(endpoint=otlp_endpoint))
-    _tracer_provider.add_span_processor(processor)
+    
+    # Check if OTLP export is enabled
+    otlp_traces_endpoint = os.getenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT") or os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+    
+    if otlp_traces_endpoint:
+        logger.info(f"Configuring OTLP trace exporter with endpoint: {otlp_traces_endpoint}")
+        
+        # Configure timeouts to prevent hanging during shutdown
+        export_timeout_millis = int(os.getenv("OTEL_BSP_EXPORT_TIMEOUT", "5000"))
+        schedule_delay_millis = int(os.getenv("OTEL_BSP_SCHEDULE_DELAY", "5000"))
+        
+        # Determine if endpoint is insecure (http vs https)
+        insecure = otlp_traces_endpoint.startswith("http://")
+        
+        processor = BatchSpanProcessor(
+            OTLPSpanExporter(
+                endpoint=otlp_traces_endpoint,
+                timeout=export_timeout_millis // 1000,  # Convert to seconds
+                insecure=insecure
+            ),
+            schedule_delay_millis=schedule_delay_millis,
+            export_timeout_millis=export_timeout_millis,
+            max_export_batch_size=512,
+            max_queue_size=2048
+        )
+        _tracer_provider.add_span_processor(processor)
+    else:
+        logger.info("OTLP trace export disabled (OTEL_EXPORTER_OTLP_TRACES_ENDPOINT not set)")
     
     trace.set_tracer_provider(_tracer_provider)
 
 
-def shutdown_tracer() -> None:
+def shutdown_tracer(timeout_millis: int = 5000) -> None:
     """Shutdown the tracer provider and flush pending spans.
     
     This should be called during application shutdown to ensure all spans
     are exported and resources are properly cleaned up.
+    
+    Args:
+        timeout_millis: Maximum time to wait for shutdown in milliseconds (default: 5000)
     """
-    global _tracer_provider
+    global _tracer_provider, _is_shutting_down
     
     if _tracer_provider:
         try:
-            logger.info("Shutting down OpenTelemetry tracer provider")
-            _tracer_provider.shutdown()
-            logger.info("OpenTelemetry tracer provider shutdown completed")
+            _is_shutting_down = True
+            logger.info(f"Shutting down OpenTelemetry tracer provider (timeout: {timeout_millis}ms)")
+            
+            # Suppress OTLP exporter errors during shutdown
+            import logging
+            otlp_logger = logging.getLogger("opentelemetry.exporter.otlp.proto.grpc.exporter")
+            original_level = otlp_logger.level
+            otlp_logger.setLevel(logging.CRITICAL)
+            
+            try:
+                # Try to flush with timeout, but don't block on failure
+                try:
+                    _tracer_provider.force_flush(timeout_millis=timeout_millis)
+                except Exception as flush_error:
+                    logger.debug(f"Error during tracer flush (continuing with shutdown): {flush_error}")
+                
+                # Shutdown with minimal blocking
+                _tracer_provider.shutdown()
+                logger.info("OpenTelemetry tracer provider shutdown completed")
+            finally:
+                # Restore original log level
+                otlp_logger.setLevel(original_level)
         except Exception as e:
             logger.warning(f"Error during tracer shutdown: {e}")
         finally:
@@ -82,7 +133,8 @@ def setup_metrics() -> None:
     Reads configuration from environment variables:
     - SERVICE_NAME: Name of the service (default: 'changeme')
     - SERVICE_VERSION: Version of the service (default: 'changeme')
-    - OTEL_EXPORTER_OTLP_ENDPOINT: OTLP endpoint (default: 'http://localhost:4317')
+    - OTEL_EXPORTER_OTLP_ENDPOINT: OTLP endpoint (only used if OTEL_EXPORTER_OTLP_METRICS_ENDPOINT is not set)
+    - OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: OTLP metrics endpoint (if not set, OTLP export is disabled)
     - OTEL_METRIC_EXPORT_INTERVAL: Export interval in milliseconds (default: 60000)
     - OTEL_METRIC_EXPORT_TIMEOUT: Export timeout in milliseconds (default: 5000)
     """
@@ -94,35 +146,74 @@ def setup_metrics() -> None:
         attributes={"service.name": service_name, "service.version": service_version}
     )
 
-    otlp_endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317")
-    export_interval_millis = int(os.getenv("OTEL_METRIC_EXPORT_INTERVAL", "60000"))
-    export_timeout_millis = int(os.getenv("OTEL_METRIC_EXPORT_TIMEOUT", "5000"))
+    # Check if OTLP export is enabled
+    otlp_metrics_endpoint = os.getenv("OTEL_EXPORTER_OTLP_METRICS_ENDPOINT") or os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
     
-    metric_reader = PeriodicExportingMetricReader(
-        OTLPMetricExporter(
-            endpoint=otlp_endpoint,
-            timeout=export_timeout_millis // 1000  # Convert to seconds
-        ),
-        export_interval_millis=export_interval_millis
-    )
+    metric_readers = []
     
-    _meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
+    if otlp_metrics_endpoint:
+        logger.info(f"Configuring OTLP metric exporter with endpoint: {otlp_metrics_endpoint}")
+        
+        export_interval_millis = int(os.getenv("OTEL_METRIC_EXPORT_INTERVAL", "60000"))
+        export_timeout_millis = int(os.getenv("OTEL_METRIC_EXPORT_TIMEOUT", "5000"))
+        
+        # Determine if endpoint is insecure (http vs https)
+        insecure = otlp_metrics_endpoint.startswith("http://")
+        
+        metric_reader = PeriodicExportingMetricReader(
+            OTLPMetricExporter(
+                endpoint=otlp_metrics_endpoint,
+                timeout=export_timeout_millis // 1000,  # Convert to seconds
+                insecure=insecure
+            ),
+            export_interval_millis=export_interval_millis,
+            export_timeout_millis=export_timeout_millis
+        )
+        metric_readers.append(metric_reader)
+    else:
+        logger.info("OTLP metric export disabled (OTEL_EXPORTER_OTLP_METRICS_ENDPOINT not set)")
+    
+    _meter_provider = MeterProvider(resource=resource, metric_readers=metric_readers)
     metrics.set_meter_provider(_meter_provider)
 
 
-def shutdown_metrics() -> None:
+def shutdown_metrics(timeout_millis: int = 5000) -> None:
     """Shutdown the metrics provider and flush pending metrics.
     
     This should be called during application shutdown to ensure all metrics
     are exported and resources are properly cleaned up.
+    
+    Args:
+        timeout_millis: Maximum time to wait for shutdown in milliseconds (default: 5000)
     """
-    global _meter_provider
+    global _meter_provider, _is_shutting_down
     
     if _meter_provider:
         try:
-            logger.info("Shutting down OpenTelemetry metrics provider")
-            _meter_provider.shutdown()
-            logger.info("OpenTelemetry metrics provider shutdown completed")
+            _is_shutting_down = True
+            logger.info(f"Shutting down OpenTelemetry metrics provider (timeout: {timeout_millis}ms)")
+            
+            # Suppress OTLP exporter errors during shutdown
+            import logging
+            otlp_logger = logging.getLogger("opentelemetry.exporter.otlp.proto.grpc.exporter")
+            original_level = otlp_logger.level
+            otlp_logger.setLevel(logging.CRITICAL)
+            
+            try:
+                # Try to flush with timeout, but don't block on failure
+                try:
+                    _meter_provider.force_flush(timeout_millis=timeout_millis)
+                except Exception as flush_error:
+                    logger.debug(f"Error during metrics flush (continuing with shutdown): {flush_error}")
+                
+                # Shutdown with timeout
+                _meter_provider.shutdown(timeout_millis=timeout_millis)
+                logger.info("OpenTelemetry metrics provider shutdown completed")
+            finally:
+                # Restore original log level after a brief delay to catch straggler logs
+                import time
+                time.sleep(0.1)
+                otlp_logger.setLevel(original_level)
         except Exception as e:
             logger.warning(f"Error during metrics shutdown: {e}")
         finally:

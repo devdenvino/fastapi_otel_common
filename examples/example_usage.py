@@ -3,6 +3,10 @@
 Demonstrates two approaches:
 1. Using create_app() with automatic middleware configuration
 2. Manual middleware setup for fine-grained control
+
+Database features demonstrated:
+- Health check endpoint via check_db_health()
+- Automatic transaction management (commit/rollback)
 """
 from fastapi import FastAPI
 
@@ -69,6 +73,20 @@ async def get_data() -> dict:
         "data": [1, 2, 3, 4, 5],
         "count": 5
     }
+
+
+# Database health check endpoint example
+# Uncomment when using database features
+# from fastapi_otel_common.database import check_db_health
+# 
+# @app.get("/health/db")
+# async def db_health():
+#     """Check database connectivity and return health status.
+#     
+#     Returns latency in milliseconds and connection status.
+#     Useful for monitoring and alerting.
+#     """
+#     return await check_db_health()
 
 
 if __name__ == "__main__":

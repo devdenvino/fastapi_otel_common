@@ -1,8 +1,8 @@
 """Test script to verify proper shutdown behavior."""
 import asyncio
 import os
-import sys
 import time
+import pytest
 
 # Set environment variables for testing
 os.environ["ENABLE_OTEL_METRICS"] = "True"
@@ -14,6 +14,7 @@ os.environ["SERVICE_VERSION"] = "1.0.0"
 
 from fastapi_otel_common import create_app
 
+@pytest.mark.asyncio
 async def test_shutdown():
     """Test application startup and shutdown."""
     print("Creating FastAPI application...")
@@ -38,20 +39,17 @@ async def test_shutdown():
     print(f"Shutdown completed in {shutdown_duration:.2f} seconds")
     
     if shutdown_duration > 10:
-        print("⚠️  WARNING: Shutdown took longer than expected!")
-        sys.exit(1)
+        pytest.fail(f"Shutdown took too long: {shutdown_duration:.2f} seconds")
     else:
         print("✅ Shutdown completed successfully within timeout!")
-        sys.exit(0)
+        # Test passes if we reach here
 
 if __name__ == "__main__":
     try:
         asyncio.run(test_shutdown())
     except KeyboardInterrupt:
         print("\n⚠️  Interrupted by user")
-        sys.exit(1)
     except Exception as e:
         print(f"❌ Error during test: {e}")
         import traceback
         traceback.print_exc()
-        sys.exit(1)
