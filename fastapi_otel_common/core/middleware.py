@@ -204,7 +204,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             tb_lines = tb.format_tb(exc_traceback)
             last_frame = tb.extract_tb(exc_traceback)[-1] if exc_traceback else None
             
-            logger.error(
+            logger.exception(
                 f"Request failed: {str(e)} (at {last_frame.filename}:{last_frame.lineno} in {last_frame.name})" if last_frame else f"Request failed: {str(e)}",
                 extra={
                     "method": request.method,

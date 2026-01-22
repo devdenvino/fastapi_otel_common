@@ -58,12 +58,12 @@ class RedisRateLimiter:
             await self.client.ping()
             logger.info(f"Connected to Redis at {self.redis_url}")
         except ImportError:
-            logger.error(
+            logger.exception(
                 "redis package not installed. Install with: pip install redis"
             )
             raise
         except Exception as e:
-            logger.error(f"Failed to connect to Redis: {str(e)}")
+            logger.exception(f"Failed to connect to Redis: {str(e)}")
             raise
     
     async def disconnect(self) -> None:
@@ -128,7 +128,7 @@ class RedisRateLimiter:
             return is_limited, headers
             
         except Exception as e:
-            logger.error(f"Redis rate limit check failed: {str(e)}")
+            logger.exception(f"Redis rate limit check failed: {str(e)}")
             # Fail open - don't rate limit if Redis is down
             return False, {}
 

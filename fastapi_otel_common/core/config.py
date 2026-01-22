@@ -18,6 +18,9 @@ DEBUG = os.getenv("DEBUG", "False").lower() in ("true", "1", "t")
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
 # OIDC Configuration
+# SSL verification for OIDC/Auth server calls (default: True)
+SSL_VERIFY = os.getenv("SSL_VERIFY", "True").lower() in ("true", "1", "t")
+
 # Fetch OIDC configuration from discovery URL
 OIDC_DISCOVERY_URL = os.getenv("OIDC_DISCOVERY_URL")
 if not OIDC_DISCOVERY_URL:
@@ -28,7 +31,7 @@ if not OIDC_DISCOVERY_URL:
 
 oidc_config: Dict[str, Any] = {}
 try:
-    with httpx.Client(timeout=10.0) as client:
+    with httpx.Client(timeout=10.0, verify=SSL_VERIFY) as client:
         discovery_response = client.get(OIDC_DISCOVERY_URL)
         discovery_response.raise_for_status()
         oidc_config = discovery_response.json()
@@ -61,6 +64,10 @@ ALLOWED_ORIGINS = [o.strip()
 TOKEN_ALGORITHMS = [
     a.strip() for a in os.getenv("TOKEN_ALGORITHMS", "RS256").split(",")
 ]
+
+# JWT token validation settings
+# Leeway for clock skew between issuer and validator (in seconds)
+JWT_LEEWAY = int(os.getenv("JWT_LEEWAY", "60"))
 
 # Define API scopes you will require from tokens
 SCOPES: Dict[str, str] = {

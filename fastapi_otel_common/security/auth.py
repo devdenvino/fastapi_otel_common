@@ -2,6 +2,7 @@
 
 Provides JWT token validation and user extraction from OIDC providers.
 """
+import ssl
 from typing import Callable, Dict, List, Optional, Union
 
 from fastapi import Depends, HTTPException, status
@@ -11,6 +12,7 @@ from jwt import PyJWKClient
 from jwt import decode as jwt_decode
 
 from ..core.config import (
+    JWT_LEEWAY,
     OIDC_AUDIENCE,
     OIDC_AUTH_URL,
     OIDC_CLIENT_ID,
@@ -20,12 +22,20 @@ from ..core.config import (
     OIDC_USER_ID_CLAIM,
     OIDC_USER_NAME_CLAIM,
     SCOPES,
+    SSL_VERIFY,
     TOKEN_ALGORITHMS,
 )
 from ..core.models import UserBase
 from ..logging.logger import get_logger
 
 logger = get_logger(__name__)
+
+# Create SSL context based on SSL_VERIFY setting
+ssl_context = None
+if not SSL_VERIFY:
+    ssl_context = ssl.create_default_context()
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
 
 oauth2_scheme = OAuth2AuthorizationCodeBearer(
     authorizationUrl=OIDC_AUTH_URL,
@@ -57,7 +67,7 @@ async def validate_token_and_get_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        jwks_client = PyJWKClient(OIDC_JWKS_URI)
+        jwks_client = PyJWKClient(OIDC_JWKS_URI, ssl_context=ssl_context)
         signing_key = jwks_client.get_signing_key_from_jwt(token)
         payload = jwt_decode(
             token,
@@ -65,6 +75,7 @@ async def validate_token_and_get_user(
             algorithms=TOKEN_ALGORITHMS,
             audience=OIDC_AUDIENCE,
             issuer=OIDC_ISSUER,
+            leeway=JWT_LEEWAY,  # Allow configurable clock skew between issuer and validator
         )
 
         username: str = payload.get(OIDC_USER_NAME_CLAIM, "")
@@ -86,21 +97,36 @@ async def validate_token_and_get_user(
         if isinstance(realm_access, dict) and "roles" in realm_access:
             roles["realm"] = realm_access["roles"]
         
+        # Handle name fields intelligently to avoid duplication
+        # If given_name and family_name are both missing, use 'name' for given_name only
+        given_name = payload.get("given_name", "")
+        family_name = payload.get("family_name", "")
+        full_name = payload.get("name", "")
+        
+        # If both are missing but we have a full name, use it for given_name only
+        if not given_name and not family_name and full_name:
+            given_name = full_name
+            family_name = ""
+        elif not given_name and not family_name:
+            # No name information at all
+            given_name = ""
+            family_name = ""
+        
         user = UserBase(
             id=userid,
             email=payload.get("email", ""),
-            given_name=payload.get("given_name", payload.get("name", "")),
-            family_name=payload.get("family_name", payload.get("name", "")),
+            given_name=given_name,
+            family_name=family_name,
             roles=roles
         )
         return user
 
     except InvalidTokenError as e:
-        logger.error(f"Invalid Token: {e}")
+        logger.exception(f"Invalid Token: {e}")
         if not optional:
             raise credentials_exception
     except Exception as e:
-        logger.error(f"Exception: {e}")
+        logger.exception(f"Exception: {e}")
         if not optional:
             raise credentials_exception
     return None

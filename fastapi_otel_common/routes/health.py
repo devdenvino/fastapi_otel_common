@@ -51,7 +51,7 @@ async def check_database() -> Dict[str, Any]:
                 "database": DB_NAME,
             }
     except Exception as e:
-        logger.error(f"Database health check failed: {str(e)}")
+        logger.exception(f"Database health check failed: {str(e)}")
         return {
             "status": "unhealthy",
             "error": str(e),
@@ -77,7 +77,7 @@ async def check_oidc_provider() -> Dict[str, Any]:
                 "response_time_ms": int(response.elapsed.total_seconds() * 1000),
             }
     except Exception as e:
-        logger.error(f"OIDC provider health check failed: {str(e)}")
+        logger.exception(f"OIDC provider health check failed: {str(e)}")
         return {
             "status": "unhealthy",
             "error": str(e),

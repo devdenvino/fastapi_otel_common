@@ -235,7 +235,7 @@ def _setup_exception_handlers(app: FastAPI) -> None:
         request: Request, exc: RequestValidationError
     ) -> JSONResponse:
         """Handle validation errors with detailed error messages."""
-        logger.error(
+        logger.exception(
             f"Validation error on {request.method} {request.url.path}: {exc.errors()}"
         )
         return JSONResponse(

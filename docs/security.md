@@ -26,6 +26,9 @@ The security module provides OIDC/OAuth2 authentication and authorization utilit
 Configure your OIDC provider using environment variables:
 
 ```bash
+# SSL Certificate Verification (default: True)
+SSL_VERIFY=True  # Set to False for self-signed certificates in development
+
 # Automatic configuration (recommended)
 OIDC_DISCOVERY_URL=https://auth.example.com/.well-known/openid-configuration
 
@@ -197,7 +200,8 @@ async def expensive_endpoint(request: Request):
 ## Best Practices
 
 1. **Use HTTPS in production** - Never send tokens over HTTP
-2. **Rotate secrets regularly** - Update client secrets periodically
+2. **Always verify SSL certificates** - Keep `SSL_VERIFY=True` in production
+3. **Rotate secrets regularly** - Update client secrets periodically
 3. **Limit token scope** - Request only necessary scopes
 4. **Enable rate limiting** - Protect against abuse
 5. **Monitor authentication** - Track failed login attempts

@@ -175,7 +175,7 @@ async def init_models() -> None:
                 await conn.run_sync(Base.metadata.create_all)
             logger.info("Database tables initialized successfully.")
         except SQLAlchemyError as e:
-            logger.error(f"Failed to initialize database tables: {e}")
+            logger.exception(f"Failed to initialize database tables: {e}")
             raise
     else:
         logger.debug("INIT_DB not set, using existing database schema.")
@@ -217,11 +217,11 @@ async def get_db_session_with_async_context() -> AsyncGenerator[AsyncSession, No
             # Commit if no exception occurred
             await session.commit()
         except SQLAlchemyError as e:
-            logger.error(f"Database error, rolling back transaction: {e}")
+            logger.exception(f"Database error, rolling back transaction: {e}")
             await session.rollback()
             raise
         except Exception as e:
-            logger.error(f"Unexpected error, rolling back transaction: {e}")
+            logger.exception(f"Unexpected error, rolling back transaction: {e}")
             await session.rollback()
             raise
         finally:
@@ -265,7 +265,7 @@ async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
             # Commit transaction if no exception occurred
             await session.commit()
         except SQLAlchemyError as e:
-            logger.error(f"Database error in request, rolling back: {e}")
+            logger.exception(f"Database error in request, rolling back: {e}")
             await session.rollback()
             raise
         except Exception as e:
@@ -326,7 +326,7 @@ async def check_db_health() -> dict:
             }
     except SQLAlchemyError as e:
         latency_ms = (time.perf_counter() - start_time) * 1000
-        logger.error(f"Database health check failed: {e}")
+        logger.exception(f"Database health check failed: {e}")
         return {
             "healthy": False,
             "database_type": db_adapter.__class__.__name__.replace("Adapter", "").lower(),
@@ -367,8 +367,8 @@ def apply_migrations(alembic_config_path: str = "alembic.ini", revision: str = "
         command.upgrade(alembic_cfg, revision)
         logger.info(f"Database migrations applied successfully to '{revision}'.")
     except SQLAlchemyError as e:
-        logger.error(f"Database error during migration: {e}")
+        logger.exception(f"Database error during migration: {e}")
         raise
     except Exception as e:
-        logger.error(f"Migration failed: {e}")
+        logger.exception(f"Migration failed: {e}")
         raise
