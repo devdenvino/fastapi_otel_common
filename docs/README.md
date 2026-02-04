@@ -8,6 +8,7 @@ This directory contains the documentation for fastapi_otel_common, built with [J
 - `installation.md` - Installation guide
 - `configuration.md` - Configuration reference
 - `middleware.md` - Middleware documentation
+- `logging.md` - Rich Logging with Loguru
 - `metrics.md` - OpenTelemetry Metrics guide
 - `health-checks.md` - Health check endpoints
 - `rate-limiting.md` - Rate limiting configuration

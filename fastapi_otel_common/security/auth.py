@@ -6,7 +6,11 @@ import ssl
 from typing import Callable, Dict, List, Optional, Union
 
 from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2AuthorizationCodeBearer
+from fastapi.security import (
+    HTTPAuthorizationCredentials,
+    HTTPBearer,
+    OAuth2AuthorizationCodeBearer,
+)
 from jwt import InvalidTokenError
 from jwt import PyJWKClient
 from jwt import decode as jwt_decode
@@ -37,13 +41,25 @@ if not SSL_VERIFY:
     ssl_context.check_hostname = False
     ssl_context.verify_mode = ssl.CERT_NONE
 
-oauth2_scheme = OAuth2AuthorizationCodeBearer(
+# Auth Token scheme (standard OAuth2 Access Token flow)
+auth_token_scheme = OAuth2AuthorizationCodeBearer(
     authorizationUrl=OIDC_AUTH_URL,
     tokenUrl=OIDC_TOKEN_URL,
     scopes=SCOPES,
-    scheme_name="OIDC",
+    scheme_name="AuthToken",
+    description="Standard OAuth2 Access Token (Auth Flow)",
     auto_error=False,
 )
+
+# ID Token scheme (Bearer token for manual entry or ID tokens)
+id_token_scheme = HTTPBearer(
+    scheme_name="IDToken",
+    description="OIDC ID Token (Paste the JWT here)",
+    auto_error=False,
+)
+
+# For backward compatibility
+oauth2_scheme = auth_token_scheme
 
 
 async def validate_token_and_get_user(
@@ -69,11 +85,15 @@ async def validate_token_and_get_user(
     try:
         jwks_client = PyJWKClient(OIDC_JWKS_URI, ssl_context=ssl_context)
         signing_key = jwks_client.get_signing_key_from_jwt(token)
+        
+        # Allow both standard audience and client ID (typical for ID tokens)
+        allowed_audiences = [OIDC_AUDIENCE, OIDC_CLIENT_ID]
+        
         payload = jwt_decode(
             token,
             signing_key.key,
             algorithms=TOKEN_ALGORITHMS,
-            audience=OIDC_AUDIENCE,
+            audience=allowed_audiences,
             issuer=OIDC_ISSUER,
             leeway=JWT_LEEWAY,  # Allow configurable clock skew between issuer and validator
         )
@@ -132,11 +152,23 @@ async def validate_token_and_get_user(
     return None
 
 
-async def get_current_user(token: str = Depends(oauth2_scheme)) -> UserBase:
+async def get_token_from_header(
+    auth_token: Optional[str] = Depends(auth_token_scheme),
+    id_token: Optional[HTTPAuthorizationCredentials] = Depends(id_token_scheme),
+) -> Optional[str]:
+    """Extract token from either AuthToken or IDToken scheme."""
+    if auth_token:
+        return auth_token
+    if id_token:
+        return id_token.credentials
+    return None
+
+
+async def get_current_user(token: Optional[str] = Depends(get_token_from_header)) -> UserBase:
     """FastAPI dependency to get authenticated user (strict mode).
     
     Args:
-        token: JWT token from Authorization header
+        token: JWT token from Authorization header (picked from AuthToken or IDToken)
         
     Returns:
         UserBase: Authenticated user information
@@ -154,7 +186,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> UserBase:
 
 
 async def get_current_user_optional(
-    token: Optional[str] = Depends(oauth2_scheme)
+    token: Optional[str] = Depends(get_token_from_header)
 ) -> Optional[UserBase]:
     """FastAPI dependency to get user if authenticated (lenient mode).
     
@@ -308,11 +340,7 @@ class RequireAllRoles:
 
 
 class RoleCondition:
-    """Base class for role checking conditions.
-    
-    Allows building complex AND/OR logic for role requirements.
-    Industry standard approach used in enterprise RBAC systems.
-    """
+    """Base class for role checking conditions."""
     
     def check(self, user_roles: List[str]) -> bool:
         """Check if the condition is satisfied.
@@ -381,7 +409,7 @@ class AllConditions(RoleCondition):
 class RequireRolesComplex:
     """FastAPI dependency for complex role checking with AND/OR logic.
     
-    Industry standard approach supporting complex authorization scenarios:
+    Supports complex authorization scenarios:
     - (admin AND auditor) OR superadmin
     - (editor OR contributor) AND (publisher OR reviewer)
     - Any combination of AND/OR conditions

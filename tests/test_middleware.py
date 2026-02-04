@@ -145,14 +145,26 @@ def test_logging_middleware(client: TestClient, caplog: pytest.LogCaptureFixture
     """Test that requests are logged with appropriate information."""
     import logging
     
-    with caplog.at_level(logging.INFO):
+    # Loguru intercepts standard logging, but we need to ensure it propagates to caplog
+    from loguru import logger as loguru_logger
+    
+    # Custom sink to propagate loguru logs to caplog
+    class PropagateHandler(logging.Handler):
+        def emit(self, record):
+            logging.getLogger(record.name).handle(record)
+
+    # Add sink to loguru
+    handler_id = loguru_logger.add(caplog.handler, format="{message}")
+    
+    try:
         response = client.get("/")
         assert response.status_code == 200
-    
-    # Check that log messages were created
-    # Note: Exact log format may vary based on logger configuration
-    log_texts = [record.message for record in caplog.records]
-    assert any("Request started" in text or "Request completed" in text for text in log_texts)
+        
+        # Check that log messages were created
+        log_texts = [record.message for record in caplog.records]
+        assert any("Request started" in text or "Request completed" in text for text in log_texts)
+    finally:
+         loguru_logger.remove(handler_id)
 
 
 if __name__ == "__main__":

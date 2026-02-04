@@ -95,3 +95,5 @@ Thumbs.db
 
 # Alembic
 alembic.ini
+# AI Generated Reports/Docs
+ai_docs/

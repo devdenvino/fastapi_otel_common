@@ -66,9 +66,40 @@ async def optional_auth(user: UserBase | None = Depends(get_current_user_optiona
 
 @app.post("/admin-only")
 async def admin_only(user: UserBase = Depends(get_current_user)):
-    if not user.is_admin:
+    # Manual check (roles are preferred now)
+    if "admin" not in user.get_roles():
         raise HTTPException(status_code=403, detail="Admin access required")
     return {"message": "Admin access granted"}
+
+## Role-Based Access Control (RBAC)
+
+The library provides dedicated dependencies for role verification:
+
+```python
+from fastapi import Depends
+from fastapi_otel_common.security import RequireRoles, RequireAllRoles, RequireRolesComplex
+from fastapi_otel_common.security import AnyRole, AllRoles, AnyCondition
+
+# 1. OR logic: user needs at least one role
+@app.get("/manager-area")
+async def manager_area(user: UserBase = Depends(RequireRoles(["admin", "manager"]))):
+    return {"message": f"Welcome, {user.given_name}"}
+
+# 2. AND logic: user needs all roles
+@app.delete("/system/reset")
+async def system_reset(user: UserBase = Depends(RequireAllRoles(["admin", "super-user"]))):
+    return {"message": "System reset initiated"}
+
+# 3. Complex logic: (admin AND auditor) OR tech-lead
+complex_logic = AnyCondition(
+    AllRoles(["admin", "auditor"]),
+    AnyRole(["tech-lead"])
+)
+
+@app.post("/critical-op")
+async def critical_op(user: UserBase = Depends(RequireRolesComplex(complex_logic))):
+    return {"message": "Operation successful"}
+```
 ```
 
 ## Application with Database

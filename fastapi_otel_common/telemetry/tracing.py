@@ -8,7 +8,7 @@ from typing import Callable
 
 from fastapi import Request
 from fastapi.responses import JSONResponse
-from jose import JWTError, jwt
+from jwt import decode as jwt_decode, PyJWTError
 from opentelemetry import trace, metrics
 from opentelemetry.context import attach, detach
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
@@ -284,10 +284,10 @@ async def trace_exceptions_middleware(request: Request, call_next: Callable):
             if auth_header and auth_header.startswith("Bearer "):
                 auth_token = auth_header.split(" ")[1]
                 try:
-                    payload = jwt.get_unverified_claims(auth_token)
+                    payload = jwt_decode(auth_token, options={"verify_signature": False})
                     if "preferred_username" in payload:
                         span.set_attribute("enduser.id", payload["preferred_username"])
-                except JWTError:
+                except PyJWTError:
                     pass  # Ignore invalid tokens
 
             response = await call_next(request)

@@ -107,10 +107,10 @@ class MetricsMiddleware(BaseHTTPMiddleware):
         
         # Track active requests
         # Convert to tuple of tuples for OpenTelemetry compatibility
-        labels = (
-            ("http.method", request.method),
-            ("http.route", request.url.path),
-        )
+        labels = {
+            "http.method": request.method,
+            "http.route": request.url.path,
+        }
         http_active_requests.add(1, labels)
         
         try:
@@ -124,11 +124,11 @@ class MetricsMiddleware(BaseHTTPMiddleware):
             
             # Complete labels with status
             # Convert to tuple of tuples for OpenTelemetry compatibility
-            metric_labels = (
-                ("http.method", request.method),
-                ("http.route", request.url.path),
-                ("http.status_code", str(response.status_code)),
-            )
+            metric_labels = {
+                "http.method": request.method,
+                "http.route": request.url.path,
+                "http.status_code": str(response.status_code),
+            }
             
             # Record metrics
             http_request_counter.add(1, metric_labels)
@@ -144,11 +144,11 @@ class MetricsMiddleware(BaseHTTPMiddleware):
         except Exception as exc:
             # Record error metrics
             # Convert to tuple of tuples for OpenTelemetry compatibility
-            error_labels = (
-                ("http.method", request.method),
-                ("http.route", request.url.path),
-                ("http.status_code", "500"),
-            )
+            error_labels = {
+                "http.method": request.method,
+                "http.route": request.url.path,
+                "http.status_code": "500",
+            }
             http_request_counter.add(1, error_labels)
             duration_ms = (time.time() - start_time) * 1000
             http_request_duration.record(duration_ms, error_labels)

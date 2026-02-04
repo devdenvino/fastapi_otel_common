@@ -25,7 +25,7 @@ Production-ready FastAPI components with OpenTelemetry integration and OIDC auth
 - ✅ **OpenTelemetry Integration** - Full observability with distributed tracing
 - ✅ **OIDC Authentication** - Production-ready OAuth2/OIDC integration
 - ✅ **Rate Limiting** - Built-in rate limiting with slowapi
-- ✅ **Structured Logging** - JSON-structured logs with correlation IDs
+- ✅ **Rich Structured Logging** - Logging with **Loguru**, featuring colorized console output and automatic OTLP export
 - ✅ **Database Management** - Async SQLAlchemy with connection pooling
 - ✅ **Type Safe** - Full type hints and PEP 561 compliance
 
@@ -86,7 +86,9 @@ ENABLE_OTEL_INSTRUMENTATION=True
 - [Installation Guide](installation) - Detailed installation instructions
 - [Configuration](configuration) - Complete configuration reference
 - [Middleware](middleware) - Middleware documentation
+- [Logging](logging) - Rich logging with Loguru
 - [Security](security) - Authentication and authorization
+- [Role-Based Access Control](role-based-access-control) - Advanced RBAC patterns
 - [Database](database) - Database integration guide
 - [Examples](examples) - Full working examples
 
@@ -95,6 +97,7 @@ ENABLE_OTEL_INSTRUMENTATION=True
 - Python 3.12+
 - FastAPI 0.116.1+
 - OpenTelemetry SDK 1.36.0+
+- Loguru 0.7.2+
 
 ## License
 

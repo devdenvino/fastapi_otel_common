@@ -5,9 +5,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.1.3] - 2026-02-04
 
 ### Added
+- **AI Agent Skills Support**: Added built-in skills for major AI agents.
+  - **Google Antigravity**: Added `.agent/skills/fastapi-otel-common/SKILL.md` for agentic workflows.
+  - **GitHub Copilot**: Added `.github/copilot-instructions.md` for tailored code completion.
+  - **Skills CLI Integration**: Support for `npx skills add devdenvino/fastapi_otel_common`.
+- **Logging with Loguru**: Integrated [Loguru](https://github.com/Delgan/loguru) for structured logging.
+  - Colorized console output with automatic Trace/Span ID correlation.
+  - Automatic OTLP export via OpenTelemetry.
+  - Stack trace interception for `uvicorn`, `fastapi`, and standard `logging`.
+  - Rich exception formatting and `async_log` decorator.
+- **RBAC**: Integrated role-based access control.
+  - `RequireRoles` (OR logic), `RequireAllRoles` (AND logic), and `RequireRolesComplex` for complex boolean logic.
+  - Intelligent role extraction from Keycloak-format JWTs.
+- **Dual-Token Swagger Support**: Swagger UI now supports both standard OAuth2 Auth Flow and manual ID Token (Bearer) entry.
+
+### Changed
+- **User Model**: Updated `UserBase` with `roles` dictionary and helper methods (`has_role`, `has_any_role`, `has_all_roles`).
+- **Refactoring & Optimization**: Major code structure refactoring for improved readability and optimized middleware stack performance.
+
+### Documentation
+- New [AI Agent Skills Guide](docs/skills.md).
+- New [Logging Guide](docs/logging.md) for Loguru features.
+- New [RBAC Guide](docs/role-based-access-control.md) with advanced patterns.
+
+## [0.1.1] - 2026-01-25
+
+### Added
+- **Shutdown Optimization**: Drastically improved application shutdown speed.
+  - Added `OTEL_SHUTDOWN_TIMEOUT` (default: 3000ms).
+  - Graceful handling of unreachable OTLP endpoints.
+- **Improved Logging**: Enhanced startup and shutdown logs for better troubleshooting.
+
+### Fixed
+- Fixed indefinite hang on shutdown when OTLP collector was unreachable.
 - **Multi-database support**: Added adapter pattern for scalable database support
   - SQLite support for development (zero configuration, no PostgreSQL needed)
   - MySQL/MariaDB support out of the box

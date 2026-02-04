@@ -12,7 +12,7 @@ Production-ready FastAPI components with OpenTelemetry integration, OIDC authent
 ### Observability
 - ✅ **OpenTelemetry Tracing** - Full distributed tracing with OTLP export
 - ✅ **OpenTelemetry Metrics** - HTTP request metrics (count, duration, size)
-- ✅ **Structured Logging** - JSON-structured logs with correlation IDs
+- ✅ **Logging** - **Loguru** integration with colorized console and OTLP export
 - ✅ **Request ID Tracking** - Distributed tracing with unique request IDs
 
 ### Security & Authentication
@@ -30,6 +30,8 @@ Production-ready FastAPI components with OpenTelemetry integration, OIDC authent
 - ✅ **Type Safe** - Full type hints and PEP 561 compliance
 - ✅ **Environment-Driven Config** - Zero-config with sensible defaults
 - ✅ **One-Line Setup** - Get started with a single function call
+- ✅ **AI Support** - Built-in support for GitHub Copilot and Antigravity Skills
+
 
 ## 📦 Installation
 
@@ -58,9 +60,9 @@ async def root():
 
 # That's it! Your app now has:
 # ✅ OpenTelemetry tracing and metrics
+# ✅ Loguru logging (Console + OTLP)
 # ✅ Security headers
 # ✅ Health check endpoints (/healthz, /readyz, /livez)
-# ✅ Request logging
 # ✅ Structured error handling
 ```
 
@@ -78,7 +80,9 @@ Full documentation is available at: **https://devdenvino.github.io/fastapi_otel_
 - [Security](https://devdenvino.github.io/fastapi_otel_common/security.html)
 - [Database](https://devdenvino.github.io/fastapi_otel_common/database.html)
 - [Examples](https://devdenvino.github.io/fastapi_otel_common/examples.html)
+- [AI Agent Skills](docs/skills.md)
 - [Contributing](https://devdenvino.github.io/fastapi_otel_common/contributing.html)
+
 
 ## 🔧 Configuration
 
@@ -164,28 +168,28 @@ async def protected_route(user: UserBase = Depends(get_current_user)):
 
 ### Role-Based Access Control (RBAC)
 
-Protect endpoints with client-specific role requirements:
+Protect endpoints with client-specific role requirements (supports OR, AND, and complex logic):
 
 ```python
-from fastapi_otel_common.security import RequireRoles
+from fastapi_otel_common.security import RequireRoles, RequireAllRoles
 
-# Require admin or manager role for my-client-id
+# Require 'admin' OR 'manager' role for default client ID
 @app.get("/admin/dashboard")
 async def admin_dashboard(
-    user: UserBase = Depends(RequireRoles("my-client-id", ["admin", "manager"]))
+    user: UserBase = Depends(RequireRoles(["admin", "manager"]))
 ):
     return {"message": f"Welcome {user.given_name}", "roles": user.roles}
 
-# Use as dependency without accessing user
+# Require BOTH 'admin' AND 'auditor' roles
 @app.delete(
     "/admin/system",
-    dependencies=[Depends(RequireRoles("my-client-id", ["super-admin"]))]
+    dependencies=[Depends(RequireAllRoles(["admin", "auditor"]))]
 )
 async def dangerous_operation():
     return {"message": "Operation completed"}
 ```
 
-See [Role-Based Access Control Documentation](docs/role-based-access-control.md) for details.
+See [Role-Based Access Control Documentation](docs/role-based-access-control.md) for advanced patterns like complex boolean logic.
 
 ## 💾 Database
 
@@ -266,6 +270,24 @@ ruff check .
 # Type check
 mypy fastapi_otel_common
 ```
+
+## 🤖 AI Agent Skills
+
+Enhance your development environment by adding project-specific skills to your AI assistants (GitHub Copilot, Antigravity, Cursor, etc.).
+
+### Adding Skills to your Workspace
+
+To automatically add the `fastapi-otel-common` skills to your project, run:
+
+```bash
+npx skills add devdenvino/fastapi_otel_common
+```
+
+This will set up:
+- `.agent/skills/` - Custom skills for **Antigravity** and other agentic IDEs.
+- `.github/copilot-instructions.md` - Tailored instructions for **GitHub Copilot**.
+
+See the [AI Agent Skills Documentation](docs/skills.md) for more details on how to customize these instructions.
 
 ## 🤝 Contributing
 

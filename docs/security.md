@@ -19,6 +19,21 @@ nav_order: 5
 
 The security module provides OIDC/OAuth2 authentication and authorization utilities for FastAPI applications.
 
+## Authentication Schemes
+
+The library provides two authentication schemes for different use cases, both of which are automatically available in Swagger UI:
+
+1. **AuthToken (OAuth2 Flow)**: A standard OAuth2 Authorization Code flow with PKCE. This is recommended for production use and is the default for automated frontend integrations.
+2. **IDToken (Bearer)**: A standard HTTP Bearer scheme where you can manually paste a JWT (ID Token). This is useful for manual testing in Swagger UI or when you already have a token from another source.
+
+### Swagger UI Integration
+
+The `create_app()` function automatically configures both schemes. In Swagger UI, you will see two authorization options:
+- **AuthToken**: Uses the `OIDC_AUTH_URL` and `OIDC_TOKEN_URL` to perform a full OAuth2 flow.
+- **IDToken**: Allows you to manually enter "Bearer <token>".
+
+Both schemes are verified using the same OIDC configuration.
+
 ## OIDC Authentication
 
 ### Configuration
@@ -129,7 +144,51 @@ class UserBase(BaseModel):
     given_name: str           # First name
     family_name: Optional[str] # Last name
     is_admin: bool = False    # Admin flag
+    roles: Dict[str, List[str]] # Client ID to roles mapping
 ```
+
+### Role-Based Access Control (RBAC)
+
+The library provides an RBAC system based on client roles and realm roles extracted from the JWT token.
+
+#### Basic Role Requirements
+
+Use `RequireRoles` for "OR" logic (at least one role required) and `RequireAllRoles` for "AND" logic (all roles required):
+
+```python
+from fastapi import Depends
+from fastapi_otel_common.security import RequireRoles, RequireAllRoles
+
+# Requires 'admin' OR 'manager'
+@app.get("/admin", dependencies=[Depends(RequireRoles(["admin", "manager"]))])
+async def admin_area():
+    return {"message": "Welcome"}
+
+# Requires BOTH 'admin' AND 'auditor'
+@app.get("/super-secret", dependencies=[Depends(RequireAllRoles(["admin", "auditor"]))])
+async def secret_area():
+    return {"message": "Welcome, super admin"}
+```
+
+#### Complex RBAC Logic
+
+The library supports complex boolean logic (AND/OR/Nested) using `RequireRolesComplex`:
+
+```python
+from fastapi_otel_common.security import (
+    RequireRolesComplex, AnyRole, AllRoles, AnyCondition, AllConditions
+)
+complex_condition = AnyCondition(
+    AllRoles(["admin", "auditor"]),
+    AnyRole(["superadmin"])
+)
+
+@app.delete("/sensitive-data")
+async def delete_data(user = Depends(RequireRolesComplex(complex_condition))):
+    return {"status": "deleted"}
+```
+
+For more details, see the [Role-Based Access Control guide](role-based-access-control.md).
 
 ## JWT Token Validation
 

@@ -36,7 +36,7 @@ LOG_LEVEL=INFO
 | `APP_TITLE` | "Change Title..." | Application name |
 | `APP_VERSION` | "1.0" | Application version |
 | `DEBUG` | False | Enable debug mode |
-| `LOG_LEVEL` | INFO | Logging level (DEBUG, INFO, WARNING, ERROR) |
+| `LOG_LEVEL` | INFO | Logging level (DEBUG, INFO, WARNING, ERROR). Applied to the **Loguru**-powered logger. |
 
 ## Middleware Configuration
 

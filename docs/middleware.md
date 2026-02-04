@@ -44,7 +44,7 @@ RATE_LIMIT_PER_MINUTE=60           # Requests per minute per IP
 RATE_LIMIT_PER_HOUR=1000           # Requests per hour per IP
 ```
 
-**Note:** Rate limiting is now powered by [slowapi](https://github.com/laurentS/slowapi), a production-ready rate limiting library for FastAPI that supports Redis backend for distributed systems.
+Rate limiting is powered by [slowapi](https://github.com/laurentS/slowapi).
 
 ## Available Middleware
 
@@ -83,14 +83,15 @@ app.add_middleware(SecurityHeadersMiddleware)
 ```
 
 ### 3. LoggingMiddleware
-Logs all requests and responses with timing information using OpenTelemetry integration.
+Logs all requests and responses with timing information using **Loguru** and OpenTelemetry integration.
 
-**Logged Information:**
-- Request method, path, client IP
-- Response status code
-- Request duration in milliseconds
-- Request ID for correlation
-- Error details for failed requests
+**Features:**
+- **Loguru Integration**: High-performance logging with beautiful terminal formatting.
+- **Automatic OTLP Export**: Logs are automatically forwarded to the configured OpenTelemetry backend.
+- **Request/Response Details**: Method, path, client IP, and status codes.
+- **Timing Info**: Precise request duration in milliseconds.
+- **Correlation**: Automatic inclusion of Request ID and Trace/Span IDs for correlation.
+- **Structured Errors**: Clear details for failed requests, including stack traces.
 
 **Usage:**
 ```python
@@ -115,8 +116,7 @@ from fastapi_otel_common.core import ErrorHandlingMiddleware
 app.add_middleware(ErrorHandlingMiddleware)
 ```
 
-### 5. Rate Limiting (slowapi)
-Production-ready rate limiting powered by [slowapi](https://github.com/laurentS/slowapi).
+### 5. Rate Limiting
 
 **Features:**
 - Global rate limiting per IP address
@@ -134,12 +134,15 @@ Production-ready rate limiting powered by [slowapi](https://github.com/laurentS/
 ENABLE_RATE_LIMIT_MIDDLEWARE=True     # Enable rate limiting
 RATE_LIMIT_PER_MINUTE=60              # Requests per minute
 RATE_LIMIT_PER_HOUR=1000              # Requests per hour
+RATE_LIMITER_BACKEND=memory           # 'memory' (slowapi) or 'redis'
+REDIS_URL=redis://localhost:6379      # Required if backend is 'redis'
 ```
 
 **Global Rate Limiting:**
-Rate limiting is automatically applied globally when `ENABLE_RATE_LIMIT_MIDDLEWARE=True`. The limiter is accessible via `app.state.limiter`.
+- **In-Memory (Default)**: When `RATE_LIMITER_BACKEND=memory`, rate limiting is powered by [slowapi](https://github.com/laurentS/slowapi) using its default in-memory storage. The limiter is accessible via `app.state.limiter`.
+- **Distributed (Redis)**: When `RATE_LIMITER_BACKEND=redis`, a custom `RedisRateLimitMiddleware` is used to provide distributed rate limiting across multiple instances.
 
-**Per-Route Rate Limiting:**
+**Per-Route Rate Limiting (via slowapi):**
 ```python
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -164,7 +167,7 @@ limiter = Limiter(
 )
 ```
 
-**Note:** slowapi provides production-ready rate limiting with Redis support for distributed systems, making it suitable for multi-instance deployments.
+slowapi supports Redis for distributed systems.
 
 ## Middleware Order
 
