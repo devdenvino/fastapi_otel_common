@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fastapi_otel_common"
-version = "0.1.3"
+version = "0.1.4"
 authors = [
   { name="Ramasubramanian Meenakshisundaram", email="vinothsubramanian@gmail.com" },
 ]
@@ -67,7 +67,7 @@ Repository = "https://github.com/devdenvino/fastapi_otel_common"
 Documentation = "https://github.com/devdenvino/fastapi_otel_common#readme"
 
 [tool.setuptools]
-packages = ["fastapi_otel_common"]
+packages.find = { where = ["."], include = ["fastapi_otel_common*"] }
 
 [tool.setuptools.package-data]
 fastapi_otel_common = ["py.typed"]
