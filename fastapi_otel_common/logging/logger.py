@@ -133,7 +133,7 @@ def get_logger(name: str) -> Any:
 
         def _log(self, level: str, msg: str, *args: Any, **kwargs: Any) -> None:
             extra = kwargs.pop("extra", {})
-            log_instance = self._logger.bind(**extra)
+            log_instance = self._logger.bind(**extra).opt(depth=2)
             getattr(log_instance, level)(msg, *args, **kwargs)
 
         def debug(self, msg: str, *args: Any, **kwargs: Any) -> None:
@@ -155,7 +155,7 @@ def get_logger(name: str) -> Any:
             self._log("exception", msg, *args, **kwargs)
 
         def bind(self, **kwargs: Any) -> "LoggerWrapper":
-            return LoggerWrapper(self._logger.bind(**kwargs))
+            return LoggerWrapper(self._logger.bind(**kwargs).opt(depth=2))
 
     return LoggerWrapper(logger.bind(name=name))
 

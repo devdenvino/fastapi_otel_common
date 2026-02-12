@@ -52,7 +52,7 @@ def test_postgresql_adapter():
     assert "postgresql://" in adapter.get_sync_uri()
     assert "postgresql+asyncpg://" in adapter.get_async_uri()
     assert adapter.supports_schemas()
-    assert adapter.get_session_setup_sql() == "SET search_path TO testschema;"
+    assert adapter.get_session_setup_sql() == 'SET search_path TO "testschema";'
     assert adapter.get_metadata_kwargs() == {"schema": "testschema"}
 
 

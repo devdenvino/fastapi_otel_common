@@ -1,7 +1,10 @@
-"""Alembic migration utilities for multi-schema support.
+"""Alembic migration utilities for multi-tenant, schema-per-tenant support.
 
-Provides migration functions for both offline and online modes with schema support.
+Runs migrations in both offline and online modes, using PostgreSQL
+search_path to target the current tenant schema. Migration scripts
+remain schemaless (no explicit `schema=`).
 """
+
 from logging.config import fileConfig
 
 from alembic import context
@@ -10,62 +13,61 @@ from sqlalchemy.schema import MetaData
 
 from .db import SQLALCHEMY_DATABASE_URI_SYNC
 
-# this is the Alembic Config object, which provides
-# access to the values within the .ini file in use.
+# Alembic Config object, provides access to the .ini file values.
 config = context.config
 
 # Interpret the config file for Python logging.
-# This line sets up loggers basically.
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
+
+
+def get_tenant() -> str | None:
+    """Read current tenant from -x tenant=... arguments."""
+    return context.get_x_argument(as_dictionary=True).get("tenant")
 
 
 def run_migrations_offline(target_metadata: MetaData) -> None:
     """Run migrations in 'offline' mode.
 
-    This configures the context with just a URL and not an Engine,
-    though an Engine is acceptable here as well. By skipping the
-    Engine creation we don't even need a DBAPI to be available.
+    This configures the context with just a URL and not an Engine.
+    No schema qualifiers are emitted; the active schema must be
+    controlled by the database URL / search_path externally.
 
-    Calls to context.execute() here emit the given string to the
-    script output.
-    
     Args:
-        target_metadata: SQLAlchemy MetaData object with schema information
+        target_metadata: SQLAlchemy MetaData object (ideally without schema=).
     """
     url = config.get_main_option("sqlalchemy.url")
+
+    # In schemaless mode, we do NOT pass version_table_schema or include_schemas.
     context.configure(
         url=url,
         target_metadata=target_metadata,
-        version_table_schema=target_metadata.schema,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
     )
 
     with context.begin_transaction():
-        # Only create schemas for databases that support them (PostgreSQL)
-        # Note: In offline mode, we assume PostgreSQL if schema is specified
-        if target_metadata.schema:
-            print(f"Creating schema {target_metadata.schema} if not exists")
-            context.execute(f"CREATE SCHEMA IF NOT EXISTS {target_metadata.schema};")
-            context.execute(f"SET search_path TO {target_metadata.schema}")
+        # Do not emit CREATE SCHEMA or SET search_path here; offline mode
+        # should be backend-agnostic and just produce SQL.
         context.run_migrations()
 
 
 def run_migrations_online(target_metadata: MetaData) -> None:
     """Run migrations in 'online' mode.
 
-    In this scenario we need to create an Engine and associate
-    a connection with the context.
-    
-    Args:
-        target_metadata: SQLAlchemy MetaData object with schema information
-    """
-    current_tenant = context.get_x_argument(as_dictionary=True).get("tenant")
+    Uses PostgreSQL search_path to point all operations at the
+    requested tenant schema. Migration scripts are generated and
+    executed without schema qualifiers.
 
-    alembic_config = config.get_section(config.config_ini_section, {})
+    Args:
+        target_metadata: SQLAlchemy MetaData object (ideally without schema=).
+    """
+    current_tenant = get_tenant()
+
+    alembic_config = config.get_section(config.config_ini_section, {}) or {}
     alembic_config["sqlalchemy.url"] = SQLALCHEMY_DATABASE_URI_SYNC
     print(f"Connecting to {alembic_config['sqlalchemy.url']}")
+
     connectable = engine_from_config(
         alembic_config,
         prefix="sqlalchemy.",
@@ -73,31 +75,28 @@ def run_migrations_online(target_metadata: MetaData) -> None:
     )
 
     with connectable.connect() as connection:
-        # Only set search_path for PostgreSQL (SQLite doesn't support schemas)
-        if connection.dialect.name == 'postgresql' and current_tenant:
-            # set search path on the connection, which ensures that
-            # PostgreSQL will emit all CREATE / ALTER / DROP statements
-            # in terms of this schema by default
-            connection.execute(text('set search_path to "%s"' % current_tenant))
-            # in SQLAlchemy v2+ the search path change needs to be committed
+        # Only do tenant-specific work for PostgreSQL and when a tenant is given.
+        if connection.dialect.name == "postgresql" and current_tenant:
+            # Ensure tenant schema exists.
+            connection.execute(
+                text(f'CREATE SCHEMA IF NOT EXISTS "{current_tenant.replace("\"", "\"\"")}"')
+            )
+
+            # Set search_path so all CREATE/ALTER/DROP target this schema by default.
+            connection.execute(
+                text(f'set search_path to "{current_tenant.replace("\"", "\"\"")}"')
+            )
+            # In SQLAlchemy v2+ the search path change needs to be committed.
             connection.commit()
 
-            # make use of non-supported SQLAlchemy attribute to ensure
-            # the dialect reflects tables in terms of the current tenant name
+            # Make the dialect reflect tables in terms of the current tenant.
             connection.dialect.default_schema_name = current_tenant
 
+        # Schemaless Alembic configuration: no include_schemas, no version_table_schema.
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
-            include_schemas=False,
         )
 
         with context.begin_transaction():
-            # Only create schemas for databases that support them (PostgreSQL)
-            if target_metadata.schema and connection.dialect.name == 'postgresql':
-                print(f"Creating schema {target_metadata.schema} if not exists")
-                context.execute(
-                    f"CREATE SCHEMA IF NOT EXISTS {target_metadata.schema};"
-                )
-                context.execute(f"SET search_path TO {target_metadata.schema}")
             context.run_migrations()

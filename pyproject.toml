@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fastapi_otel_common"
-version = "0.1.4"
+version = "0.1.5"
 authors = [
   { name="Ramasubramanian Meenakshisundaram", email="vinothsubramanian@gmail.com" },
 ]
